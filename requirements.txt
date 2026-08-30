@@ -1,0 +1,118 @@
+# ==============================
+# Web Framework
+# ==============================
+
+fastapi
+uvicorn[standard]
+python-multipart
+
+
+# ==============================
+# Configuration
+# ==============================
+
+python-dotenv
+pydantic
+pydantic-settings
+
+
+# ==============================
+# Database
+# ==============================
+
+sqlalchemy
+psycopg2-binary
+
+
+# ==============================
+# Authentication
+# ==============================
+
+python-jose[cryptography]
+passlib[bcrypt]
+
+
+# ==============================
+# HTTP
+# ==============================
+
+httpx
+requests
+
+
+# ==============================
+# AI / LLM
+# ==============================
+
+openai
+langchain
+langgraph
+
+
+# ==============================
+# RAG
+# ==============================
+
+numpy
+pandas
+scikit-learn
+
+
+# ==============================
+# Document Processing
+# ==============================
+
+pypdf
+python-docx
+
+
+# ==============================
+# Database Migrations
+# ==============================
+
+alembic
+
+
+# ==============================
+# Vector Database
+# ==============================
+
+qdrant-client
+
+
+# ==============================
+# Task Queue / Background Jobs
+# ==============================
+
+celery
+redis
+
+
+# ==============================
+# Document Processing (Extended)
+# ==============================
+
+markdown
+beautifulsoup4
+lxml
+
+
+# ==============================
+# Evaluation / Metrics
+# ==============================
+
+scipy
+
+
+# ==============================
+# Testing
+# ==============================
+
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+pytest-xdist
+pytest-timeout
+httpx
+faker

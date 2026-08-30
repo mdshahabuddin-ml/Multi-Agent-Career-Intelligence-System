@@ -1,0 +1,223 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: careerintel-postgres
+    environment:
+      POSTGRES_USER: careerintel
+      POSTGRES_PASSWORD: careerintel
+      POSTGRES_DB: careerintel
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careerintel -d careerintel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: careerintel-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: careerintel-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-backend
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://careerintel:careerintel@postgres:5432/careerintel
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - FRONTEND_URL=http://localhost:5173
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery-worker-research:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-research
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://careerintel:careerintel@postgres:5432/careerintel
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A backend.workers.celery_app worker -Q research -l info --concurrency=2
+
+  celery-worker-jobs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-jobs
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://careerintel:careerintel@postgres:5432/careerintel
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A backend.workers.celery_app worker -Q jobs -l info --concurrency=2
+
+  celery-worker-documents:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-documents
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://careerintel:careerintel@postgres:5432/careerintel
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A backend.workers.celery_app worker -Q documents -l info --concurrency=2
+
+  celery-worker-embeddings:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-embeddings
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://careerintel:careerintel@postgres:5432/careerintel
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A backend.workers.celery_app worker -Q embeddings -l info --concurrency=2
+
+  celery-worker-notifications:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-notifications
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://careerintel:careerintel@postgres:5432/careerintel
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A backend.workers.celery_app worker -Q notifications -l info --concurrency=4
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-beat
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://careerintel:careerintel@postgres:5432/careerintel
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A backend.workers.celery_app beat -l info --scheduler celery.beat.PersistentScheduler
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: careerintel-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+
+networks:
+  default:
+    name: careerintel-network
