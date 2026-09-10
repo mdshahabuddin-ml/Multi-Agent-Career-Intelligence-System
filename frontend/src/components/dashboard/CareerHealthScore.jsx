@@ -56,10 +56,10 @@ function CareerHealthScore() {
 
   const score = insights.overall_score || 0;
   const getScoreColor = (score) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    if (score >= 40) return "text-orange-600";
-    return "text-red-600";
+    if (score >= 80) return "#2563eb";
+    if (score >= 60) return "#3b82f6";
+    if (score >= 40) return "#60a5fa";
+    return "#93c5fd";
   };
 
   const getScoreLabel = (score) => {
@@ -78,7 +78,7 @@ function CareerHealthScore() {
               cx="60"
               cy="60"
               r="50"
-              stroke="#e5e7eb"
+              stroke="#bfdbfe"
               strokeWidth="10"
               fill="none"
             />
@@ -96,7 +96,7 @@ function CareerHealthScore() {
             />
           </svg>
           <div className="score-text">
-            <span className={`score-value ${getScoreColor(insights.overall_score)}`}>
+            <span className="score-value" style={{ color: getScoreColor(insights.overall_score) }}>
               {insights.overall_score}
             </span>
             <span className="score-label">{getScoreLabel(insights.overall_score)}</span>

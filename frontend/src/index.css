@@ -49,6 +49,7 @@ a {
 .main-content {
     flex: 1;
     padding: 32px;
+    background: #f0f5ff;
 }
 
 
@@ -61,13 +62,15 @@ a {
     display: flex;
     align-items: center;
     padding: 0 24px;
-    background: white;
-    border-bottom: 1px solid #e5e7eb;
+    background: #1e3a8a;
+    border-bottom: 1px solid #1e40af;
     gap: 20px;
+    color: white;
 }
 
 .navbar-brand {
     font-size: 20px;
+    color: white;
 }
 
 .navbar-user {
@@ -82,6 +85,7 @@ a {
     border: 0;
     background: transparent;
     padding: 8px;
+    color: white;
 }
 
 
@@ -91,8 +95,8 @@ a {
 
 .sidebar {
     width: 240px;
-    background: white;
-    border-right: 1px solid #e5e7eb;
+    background: #1e3a8a;
+    border-right: 1px solid #1e40af;
     padding: 24px 12px;
 }
 
@@ -105,16 +109,16 @@ a {
 .nav-link {
     padding: 12px 16px;
     border-radius: 8px;
-    color: #4b5563;
+    color: #bfdbfe;
 }
 
 .nav-link:hover {
-    background: #f3f4f6;
+    background: #1e40af;
 }
 
 .nav-link.active {
-    background: #e8eefc;
-    color: #1d4ed8;
+    background: #2563eb;
+    color: white;
     font-weight: 600;
 }
 
@@ -134,6 +138,7 @@ a {
 
 .page-header h1 {
     margin-bottom: 8px;
+    color: #1e3a8a;
 }
 
 .page-header p {
@@ -159,6 +164,48 @@ a {
     min-width: 0;
 }
 
+.career-health-score .card-header {
+    background: #1e3a8a;
+    color: white;
+}
+
+.career-health-score .card-header h3 {
+    color: white;
+}
+
+.score-svg {
+    width: 120px;
+    height: 120px;
+}
+
+.score-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.score-circle {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.score-value {
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.score-label {
+    font-size: 12px;
+    color: #6b7280;
+}
+
 @media (max-width: 900px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
@@ -181,6 +228,7 @@ a {
 .card-header {
     padding: 18px 20px;
     border-bottom: 1px solid #e5e7eb;
+    background: #eff6ff;
 }
 
 .card-header h3 {
@@ -270,7 +318,7 @@ select:focus {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: #f5f7fb;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
 }
 
 .auth-card {
@@ -344,6 +392,48 @@ select:focus {
     border: 1px solid #fecaca;
     border-radius: 8px;
     color: #991b1b;
+}
+
+
+/* =====================================
+   Quick Actions
+===================================== */
+
+.quick-actions .actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+}
+
+.action-icon {
+    font-size: 24px;
+}
+
+.action-title {
+    display: block;
+    font-weight: 600;
+    color: #1e3a8a;
+}
+
+.action-desc {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
 }
 
 

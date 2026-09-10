@@ -73,7 +73,7 @@ function LearningProgress() {
               cx="60"
               cy="60"
               r="50"
-              stroke="#e5e7eb"
+              stroke="#bfdbfe"
               strokeWidth="10"
               fill="none"
             />
