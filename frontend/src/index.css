@@ -438,6 +438,253 @@ select:focus {
 
 
 /* =====================================
+   Jobs Page
+===================================== */
+
+.jobs-tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.jobs-tab {
+    flex: 1;
+    padding: 14px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.jobs-tab:hover {
+    color: #374151;
+    background: #f9fafb;
+}
+
+.jobs-tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+}
+
+.jobs-tab-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.jobs-filter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+.jobs-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.jobs-checkbox input[type="checkbox"] {
+    width: auto;
+}
+
+.jobs-results {
+    margin-top: 24px;
+}
+
+.jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+}
+
+.job-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 20px;
+    transition: box-shadow 0.2s;
+}
+
+.job-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.job-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.job-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.job-card-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-card-company {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.job-card-badges {
+    display: flex;
+    gap: 6px;
+    margin-left: 12px;
+    flex-shrink: 0;
+}
+
+.job-tier-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: capitalize;
+}
+
+.tier-excellent {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.tier-good {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.tier-fair {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.tier-poor {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.job-match-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.job-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 12px;
+}
+
+.job-card-meta span::before {
+    margin-right: 4px;
+}
+
+.job-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.job-tag {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.job-tag.tag-match {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.job-tag.tag-missing {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.job-card-skills {
+    margin-bottom: 12px;
+}
+
+.job-skills-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.job-card-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.job-card-actions .btn {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    padding: 8px 12px;
+}
+
+.job-card-actions .btn:last-child {
+    background: #2563eb;
+    color: white;
+}
+
+.job-card-actions .btn:last-child:hover {
+    background: #1d4ed8;
+}
+
+@media (max-width: 700px) {
+    .jobs-grid {
+        grid-template-columns: 1fr;
+    }
+    .jobs-filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}
+
+
+/* =====================================
    Responsive
 ===================================== */
 

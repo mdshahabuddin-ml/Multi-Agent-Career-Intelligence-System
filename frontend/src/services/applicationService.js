@@ -46,7 +46,7 @@ const applicationService = {
     */
 
     async createApplication(applicationData) {
-        const response = await api.post("/api/applications", applicationData);
+        const response = await api.post("/api/applications/", applicationData);
         return response.data;
     },
 

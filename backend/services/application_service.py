@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 from datetime import date, datetime
 
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from backend.agents.application import (
     ApplicationAgent,
@@ -223,30 +224,25 @@ class ApplicationService:
         if not user:
             raise ValueError("User not found")
 
-        job = self.db.query(Job).filter(Job.id == job_id).first()
-        if not job:
-            raise ValueError("Job not found")
+        job = self.db.query(Job).filter(Job.id == job_id).first() if job_id else None
+
+        if job_id and not job:
+            raise HTTPException(status_code=404, detail=f"Job with id {job_id} not found")
 
         # Check if already applied
-        existing = self.db.query(ApplicationModel).filter(
-            ApplicationModel.user_id == user_id,
-            ApplicationModel.job_id == job_id,
-        ).first()
-        if existing:
-            raise ValueError("Already applied to this job")
-
-        # Get primary resume
-        primary_resume = self.db.query(ApplicationModel).filter(
-            ApplicationModel.user_id == user_id,
-            ApplicationModel.resume_id != None,
-        ).first()
+        if job:
+            existing = self.db.query(ApplicationModel).filter(
+                ApplicationModel.user_id == user_id,
+                ApplicationModel.job_id == job_id,
+            ).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Already applied to this job")
 
         application = ApplicationModel(
             user_id=user_id,
             job_id=job_id,
-            resume_id=primary_resume.resume_id if primary_resume else None,
             cover_letter=cover_letter,
-            status=ApplicationStatus.SUBMITTED,
+            status=ApplicationStatus.DRAFT,
             applied_date=date.today(),
             application_answers=answers or {},
         )

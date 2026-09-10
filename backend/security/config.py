@@ -84,7 +84,7 @@ class SecurityConfig(BaseModel):
 
     # Content Security
     ENABLE_XSS_PROTECTION: bool = True
-    ENABLE_CSRF_PROTECTION: bool = True
+    ENABLE_CSRF_PROTECTION: bool = not settings.DEBUG
     CSRF_TOKEN_LENGTH: int = 32
     CSRF_COOKIE_NAME: str = "csrf_token"
     CSRF_HEADER_NAME: str = "X-CSRF-Token"

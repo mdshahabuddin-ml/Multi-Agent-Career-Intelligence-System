@@ -386,10 +386,11 @@ async def get_csrf_token(response: Response):
     response.set_cookie(
         key=config.CSRF_COOKIE_NAME,
         value=token,
-        httponly=True,
+        httponly=False,
         secure=False,  # Set to True in production with HTTPS
         samesite="lax",
         max_age=3600,  # 1 hour
+        path="/",
     )
 
     return CSRFTokenResponse(csrf_token=token)
