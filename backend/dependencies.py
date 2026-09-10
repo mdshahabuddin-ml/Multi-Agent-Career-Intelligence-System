@@ -25,8 +25,12 @@ def get_current_user(
     payload = decode_token(token)
     if payload is None:
         raise credentials_exception
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    # NOTE: create_access_token() stringifies "sub", so coerce back to int
+    # here. Comparing the Integer column against a raw string relies on
+    # DB-specific type affinity and fails on strict databases.
+    try:
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
         raise credentials_exception
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
@@ -51,8 +55,9 @@ def get_optional_current_user(
     payload = decode_token(token)
     if payload is None:
         return None
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    try:
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
         return None
     user = db.query(User).filter(User.id == user_id).first()
     return user

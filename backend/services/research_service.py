@@ -12,6 +12,9 @@ from backend.agents.research import (
     ReportAgent,
 )
 from backend.models import Research, ResearchStatus, ResearchType, User
+from backend.models.research_source import ResearchSource
+from backend.models.research_claim import ResearchClaim
+from backend.models.research_evidence import ResearchEvidence
 from backend.database import get_db
 from backend.services.websocket_manager import notify_research_progress
 
@@ -359,24 +362,30 @@ class ResearchService:
 
         return {
             "id": research.id,
+            "user_id": research.user_id,
             "query": research.query,
             "research_type": research.research_type.value,
             "status": research.status.value,
+            "progress": research.progress,
+            "error_message": research.error_message,
             "executive_summary": research.executive_summary,
             "key_findings": research.key_findings,
             "recommendations": research.recommendations,
             "confidence_score": research.confidence_score,
             "source_count": len(sources),
-            "verified_claim_count": len([c for c in claims if c.status in ["verified", "likely"]]),
+            "verified_claim_count": len([
+                c for c in claims
+                if (c.status.value if hasattr(c.status, "value") else c.status) == "verified"
+            ]),
             "sources": [
                 {
                     "id": s.id,
                     "url": s.url,
                     "title": s.title,
-                    "source_type": s.source_type,
+                    "source_type": s.source_type.value if hasattr(s.source_type, "value") else s.source_type,
                     "domain": s.domain,
-                    "credibility": s.credibility,
-                    "relevance": s.relevance,
+                    "credibility": s.credibility_score,
+                    "relevance": s.relevance_score,
                     "author": s.author,
                     "published_date": s.published_date.isoformat() if s.published_date else None,
                 }
@@ -386,10 +395,9 @@ class ResearchService:
                 {
                     "id": c.id,
                     "claim_text": c.claim_text,
-                    "claim_id": c.claim_id,
-                    "status": c.status,
-                    "confidence": c.confidence,
-                    "supporting_sources": c.supporting_sources,
+                    "claim_type": c.claim_type,
+                    "status": c.status.value if hasattr(c.status, "value") else c.status,
+                    "verified_by_sources": c.verified_by_sources,
                     "conflicting_sources": c.conflicting_sources,
                 }
                 for c in claims
@@ -398,24 +406,18 @@ class ResearchService:
                 {
                     "id": e.id,
                     "claim_id": e.claim_id,
-                    "source_url": e.source_url,
-                    "source_title": e.source_title,
                     "evidence_text": e.evidence_text,
-                    "evidence_type": e.evidence_type,
+                    "evidence_type": e.evidence_type.value if hasattr(e.evidence_type, "value") else e.evidence_type,
                     "supports_claim": e.supports_claim,
                     "relevance_score": e.relevance_score,
                     "confidence_score": e.confidence_score,
-                    "quality_score": e.quality_score,
-                    "authority_score": e.authority_score,
-                    "recency_score": e.recency_score,
-                    "specificity_score": e.specificity_score,
-                    "corroboration_score": e.corroboration_score,
-                    "final_score": e.final_score,
-                    "rank": e.rank,
                 }
                 for e in evidence
             ],
+            "started_at": research.started_at.isoformat() if research.started_at else None,
             "completed_at": research.completed_at.isoformat() if research.completed_at else None,
+            "created_at": research.created_at.isoformat() if research.created_at else None,
+            "updated_at": research.updated_at.isoformat() if research.updated_at else None,
         }
 
     async def export_research_report(

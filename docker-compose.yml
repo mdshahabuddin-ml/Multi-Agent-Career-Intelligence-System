@@ -1,6 +1,10 @@
 version: '3.8'
 
 services:
+  # ============================
+  # Infrastructure Services
+  # ============================
+
   postgres:
     image: postgres:16-alpine
     container_name: careerintel-postgres
@@ -12,11 +16,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U careerintel -d careerintel"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - careerintel-network
 
   redis:
     image: redis:7-alpine
@@ -30,6 +37,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - careerintel-network
 
   qdrant:
     image: qdrant/qdrant:v1.9.0
@@ -44,6 +53,114 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - careerintel-network
+
+  # ============================
+  # Monitoring Stack
+  # ============================
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: careerintel-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - careerintel-network
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: careerintel-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - careerintel-network
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: careerintel-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - careerintel-network
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: careerintel-promtail
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml
+      - ./backend:/app/backend:ro
+      - ./logs:/var/log/careerintel
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - careerintel-network
+
+  # ============================
+  # LLM Observability (OTLP receiver + trace UI)
+  # Disabled by default: backend only exports when OTEL_ENABLED=true.
+  # UI: http://localhost:6006 | OTLP/HTTP: http://localhost:4318
+  # ============================
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: careerintel-phoenix
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - PHOENIX_SQL_DATABASE_URL=sqlite:///phoenix.db
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6006/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - careerintel-network
+
+  # ============================
+  # Backend API
+  # ============================
 
   backend:
     build:
@@ -56,12 +173,17 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - QDRANT_URL=http://qdrant:6333
       - FRONTEND_URL=http://localhost:5173
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-careerintel-backend}
+      - PHOENIX_OTLP_ENDPOINT=${PHOENIX_OTLP_ENDPOINT:-http://phoenix:4318/v1/traces}
     env_file:
       - .env
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app/backend
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,6 +192,12 @@ services:
       qdrant:
         condition: service_healthy
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - careerintel-network
+
+  # ============================
+  # Celery Workers
+  # ============================
 
   celery-worker-research:
     build:
@@ -85,12 +213,15 @@ services:
       - .env
     volumes:
       - ./backend:/app/backend
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A backend.workers.celery_app worker -Q research -l info --concurrency=2
+    networks:
+      - careerintel-network
 
   celery-worker-jobs:
     build:
@@ -106,12 +237,15 @@ services:
       - .env
     volumes:
       - ./backend:/app/backend
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A backend.workers.celery_app worker -Q jobs -l info --concurrency=2
+    networks:
+      - careerintel-network
 
   celery-worker-documents:
     build:
@@ -127,12 +261,15 @@ services:
       - .env
     volumes:
       - ./backend:/app/backend
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A backend.workers.celery_app worker -Q documents -l info --concurrency=2
+    networks:
+      - careerintel-network
 
   celery-worker-embeddings:
     build:
@@ -148,12 +285,15 @@ services:
       - .env
     volumes:
       - ./backend:/app/backend
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A backend.workers.celery_app worker -Q embeddings -l info --concurrency=2
+    networks:
+      - careerintel-network
 
   celery-worker-notifications:
     build:
@@ -169,12 +309,15 @@ services:
       - .env
     volumes:
       - ./backend:/app/backend
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A backend.workers.celery_app worker -Q notifications -l info --concurrency=4
+    networks:
+      - careerintel-network
 
   celery-beat:
     build:
@@ -190,12 +333,19 @@ services:
       - .env
     volumes:
       - ./backend:/app/backend
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A backend.workers.celery_app beat -l info --scheduler celery.beat.PersistentScheduler
+    networks:
+      - careerintel-network
+
+  # ============================
+  # Frontend (Vite Dev Server)
+  # ============================
 
   frontend:
     build:
@@ -212,12 +362,35 @@ services:
     depends_on:
       - backend
     command: npm run dev -- --host 0.0.0.0
+    networks:
+      - careerintel-network
+
+  # ============================
+  # Celery Monitoring
+  # ============================
+
+  flower:
+    image: mher/flower:2.0.1
+    container_name: careerintel-flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+    depends_on:
+      - redis
+    command: celery -A backend.workers.celery_app flower --port=5555 --broker=redis://redis:6379/0
+    networks:
+      - careerintel-network
 
 volumes:
   postgres_data:
   redis_data:
   qdrant_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
-  default:
-    name: careerintel-network
+  careerintel-network:
+    driver: bridge

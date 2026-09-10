@@ -14,7 +14,7 @@ from backend.models.research_claim import ResearchClaim
 from backend.models.research_evidence import ResearchEvidence
 from backend.models.interview import Interview
 from backend.models.learning_plan import LearningPlan
-from backend.models.notification import Notification
+from backend.models.notification import Notification, NotificationType, NotificationPriority
 from backend.models.preference import (
     UserPreference,
     UserBehaviorLog,
@@ -35,16 +35,78 @@ from backend.models.organization import (
     TeamMember,
     Invitation,
     Subscription,
+    SubscriptionStatus,
     Invoice,
     UsageRecord,
     FeatureFlag,
+    BillingInterval,
+)
+from backend.models.content_calendar import (
+    ContentCalendar,
+    ContentAnalytics,
+    SocialPlatform,
+    ContentStatus,
+    ContentType,
+)
+from backend.models.voice_chat import (
+    VoiceCommand,
+    VoiceCommandType,
+    VoiceCommandStatus,
+    ChatMessage,
+    ChatSession,
+)
+from backend.models.hermes_memory import HermesMemory, HermesConversation
+from backend.models.hermes_skill import HermesSkill, HermesSkillExecution
+from backend.models.agent_task import AgentTask
+from backend.models.automation import Automation, AutomationExecution
+from backend.models.social_account import SocialAccount
+from backend.models.social_post import SocialPost
+from backend.models.content import Content
+from backend.models.content_asset import ContentAsset
+from backend.models.content_campaign import ContentCampaign
+from backend.models.monitoring import (
+    Metric,
+    MetricType,
+    AlertRule,
+    AlertSeverity,
+    AlertStatus,
+    Alert,
+    HealthCheck,
+    HealthStatus,
+    HealthCheckResult,
+    StructuredLog,
+    LogLevel,
+    Trace,
+    TraceStatus,
+    Span,
+    Dashboard,
+    DashboardPanel,
+    Incident,
+    AgentExecution,
+    AgentExecutionStatus,
+    ToolExecution,
+    ToolExecutionStatus,
+)
+from backend.models.data_source import (
+    DataSource,
+    SourceConfig,
+    SourceProviderType,
+    SourceType,
+)
+from backend.models.certification import Certification
+from backend.models.achievement import Achievement
+from backend.models.api_key import ApiKey
+from backend.models.content_pipeline_run import (
+    ContentPipelineRun,
+    ContentKind,
+    PipelineSource,
+    PipelineStage,
 )
 
 
 __all__ = [
     "Base",
     "User",
-    "Profile",
     "Skill",
     "Project",
     "Experience",
@@ -62,6 +124,8 @@ __all__ = [
     "Interview",
     "LearningPlan",
     "Notification",
+    "NotificationType",
+    "NotificationPriority",
     "UserPreference",
     "UserBehaviorLog",
     "UserInteraction",
@@ -79,7 +143,63 @@ __all__ = [
     "TeamMember",
     "Invitation",
     "Subscription",
+    "SubscriptionStatus",
     "Invoice",
     "UsageRecord",
     "FeatureFlag",
+    "BillingInterval",
+    "ContentCalendar",
+    "ContentAnalytics",
+    "SocialPlatform",
+    "ContentStatus",
+    "ContentType",
+    "VoiceCommand",
+    "VoiceCommandType",
+    "VoiceCommandStatus",
+    "ChatMessage",
+    "ChatSession",
+    "HermesMemory",
+    "HermesConversation",
+    "HermesSkill",
+    "HermesSkillExecution",
+    "AgentTask",
+    "Automation",
+    "AutomationExecution",
+    "SocialAccount",
+    "SocialPost",
+    "Content",
+    "ContentAsset",
+    "ContentCampaign",
+    "Metric",
+    "MetricType",
+    "AlertRule",
+    "AlertSeverity",
+    "AlertStatus",
+    "Alert",
+    "HealthCheck",
+    "HealthStatus",
+    "HealthCheckResult",
+    "StructuredLog",
+    "LogLevel",
+    "Trace",
+    "TraceStatus",
+    "Span",
+    "Dashboard",
+    "DashboardPanel",
+    "Incident",
+    "AgentExecution",
+    "AgentExecutionStatus",
+    "ToolExecution",
+    "ToolExecutionStatus",
+    "DataSource",
+    "SourceConfig",
+    "SourceProviderType",
+    "SourceType",
+    "Certification",
+    "Achievement",
+    "ApiKey",
+    "ContentPipelineRun",
+    "ContentKind",
+    "PipelineSource",
+    "PipelineStage",
 ]

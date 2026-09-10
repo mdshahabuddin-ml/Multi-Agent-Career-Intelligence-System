@@ -55,6 +55,17 @@ class CoverLetterResult:
     personalization_score: float  # 0-100
     suggestions: List[str]
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "content": self.content,
+            "word_count": self.word_count,
+            "tone": self.tone.value if hasattr(self.tone, "value") else str(self.tone),
+            "length": self.length.value if hasattr(self.length, "value") else str(self.length),
+            "key_points_covered": self.key_points_covered,
+            "personalization_score": self.personalization_score,
+            "suggestions": self.suggestions,
+        }
+
 
 class CoverLetterAgent:
     """Generate personalized cover letters."""

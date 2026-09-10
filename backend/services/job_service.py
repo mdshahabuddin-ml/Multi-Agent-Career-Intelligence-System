@@ -18,6 +18,7 @@ from backend.agents.jobs import (
 )
 from backend.config import settings
 from backend.models import Job, Company, User, Application, Skill, Resume
+from backend.models.application import ApplicationStatus
 from backend.services.resume_service import ResumeService
 
 logger = logging.getLogger(__name__)
@@ -199,7 +200,7 @@ class JobService:
             q = q.filter(Job.employment_type == employment_type)
 
         if salary_min:
-            q = q.filter(or_(Job.salary_yearly_min >= salary_min, Job.salary_yearly_max >= salary_min))
+            q = q.filter(or_(Job.salary_min >= salary_min, Job.salary_max >= salary_min))
 
         if skills:
             # Filter by skills (PostgreSQL JSONB contains)
@@ -300,8 +301,8 @@ class JobService:
                 salary_max=job.salary_max,
                 salary_currency=job.salary_currency,
                 salary_period=job.salary_period,
-                salary_yearly_min=job.salary_yearly_min,
-                salary_yearly_max=job.salary_yearly_max,
+                salary_yearly_min=job.salary_min,
+                salary_yearly_max=job.salary_max,
                 experience_level=job.experience_level,
                 employment_type=job.employment_type,
                 source=job.source,
@@ -320,7 +321,7 @@ class JobService:
 
         # Match jobs to candidate
         matches = self.matching_agent.match_batch(
-            norm_jobs=norm_jobs,
+            jobs=norm_jobs,
             candidate_skills=candidate_skills,
             candidate_experience_years=candidate_experience,
             candidate_location=candidate_location,
@@ -344,8 +345,8 @@ class JobService:
                 "location": job.location if job else "Unknown",
                 "is_remote": job.is_remote if job else False,
                 "remote_type": job.remote_type if job else None,
-                "salary_min": job.salary_yearly_min if job else None,
-                "salary_max": job.salary_yearly_max if job else None,
+                "salary_min": job.salary_min if job else None,
+                "salary_max": job.salary_max if job else None,
                 "experience_level": job.experience_level if job else None,
                 "employment_type": job.employment_type if job else None,
                 "match_score": ranked_opp.composite_score,
@@ -390,7 +391,7 @@ class JobService:
             user_id=user_id,
             job_id=job_id,
             resume_id=primary_resume.id if primary_resume else None,
-            status="saved",
+            status=ApplicationStatus.DRAFT,
             notes=notes,
         )
         self.db.add(application)

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { careerService, LearningStyle } from "@services";
+import { careerService } from "@services";
 import Card from "../common/Card";
 import Loading from "../common/Loading";
 import ErrorMessage from "../common/ErrorMessage";
+import Button from "../common/Button";
 
 function LearningProgress() {
   const [learningPlan, setLearningPlan] = useState(null);
@@ -18,12 +19,17 @@ function LearningProgress() {
     try {
       setLoading(true);
       // In a real app, this would fetch the user's current learning plan
-      // For now, we'll show a placeholder
+      // For now, we'll show the empty state
     } catch (err) {
       setError("Failed to load learning progress");
     } finally {
       setLoading(false);
     }
+  };
+
+  const createLearningPlan = () => {
+    // Navigate to career page to create a learning plan
+    window.location.href = "/career";
   };
 
   if (loading) {
@@ -40,9 +46,9 @@ function LearningProgress() {
         <div className="empty-state">
           <h3>No Active Learning Plan</h3>
           <p>Create a learning plan to track your skill development progress.</p>
-          <button className="btn btn-primary" onClick={() => createLearningPlan()}>
+          <Button variant="primary" onClick={createLearningPlan}>
             Create Learning Plan
-          </button>
+          </Button>
         </div>
       </Card>
     );
@@ -163,12 +169,12 @@ function LearningProgress() {
       </div>
 
       <div className="learning-actions">
-        <button className="btn btn-primary" onClick={() => updateProgress()}>
+        <Button variant="primary" disabled>
           Update Progress
-        </button>
-        <button className="btn btn-secondary" onClick={() => adjustPlan()}>
+        </Button>
+        <Button variant="secondary" disabled>
           Adjust Plan
-        </button>
+        </Button>
       </div>
     </Card>
   );

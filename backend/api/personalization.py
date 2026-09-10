@@ -44,7 +44,7 @@ async def get_preferences(
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
-    return preferences
+    return UserPreferenceResponse.from_entity(preferences)
 
 
 @router.post("/preferences", response_model=UserPreferenceResponse, status_code=status.HTTP_201_CREATED)
@@ -55,7 +55,9 @@ async def create_preferences(
 ):
     """Create user preferences."""
     try:
-        return service.create_preferences(current_user.id, preferences)
+        return UserPreferenceResponse.from_entity(
+            service.create_preferences(current_user.id, preferences)
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -70,7 +72,7 @@ async def update_preferences(
     result = service.update_preferences(current_user.id, preferences)
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preferences not found")
-    return result
+    return UserPreferenceResponse.from_entity(result)
 
 
 @router.delete("/preferences", status_code=status.HTTP_204_NO_CONTENT)
@@ -101,7 +103,9 @@ async def import_preferences(
     service: PersonalizationService = Depends(get_personalization_service),
 ):
     """Import user preferences from JSON."""
-    return service.import_preferences(current_user.id, data.dict())
+    return UserPreferenceResponse.from_entity(
+        service.import_preferences(current_user.id, data.dict())
+    )
 
 
 # ============= Behavior Logging =============

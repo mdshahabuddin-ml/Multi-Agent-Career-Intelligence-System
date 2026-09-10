@@ -14,6 +14,11 @@ class SecurityConfig(BaseModel):
     RATE_LIMIT_WINDOW_SECONDS: int = 60
     RATE_LIMIT_BURST: int = 20
 
+    # Lockout duration: 1 minute in development, 15 minutes in production.
+    # This allows developers to recover quickly from accidental burst
+    # triggers while keeping full protection in production.
+    LOCKOUT_DURATION_MINUTES: int = 1 if settings.DEBUG else 15
+
     # CORS
     CORS_ALLOW_ORIGINS: List[str] = [
         "http://127.0.0.1:5173",
@@ -76,7 +81,6 @@ class SecurityConfig(BaseModel):
     IP_WHITELIST: List[str] = []
     IP_BLACKLIST: List[str] = []
     MAX_FAILED_LOGIN_ATTEMPTS: int = 5
-    LOCKOUT_DURATION_MINUTES: int = 15
 
     # Content Security
     ENABLE_XSS_PROTECTION: bool = True

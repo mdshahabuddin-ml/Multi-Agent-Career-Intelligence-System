@@ -9,10 +9,7 @@ from backend.database import Base
 class Profile(Base):
     __tablename__ = "profiles"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True,
-        index=True,
-    )
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
@@ -21,43 +18,25 @@ class Profile(Base):
         index=True,
     )
 
-    headline: Mapped[str | None] = mapped_column(
-        String(500),
-        nullable=True,
-    )
+    headline: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    target_role: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,
-    )
+    target_role: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    location: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,
-    )
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    bio: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    years_of_experience: Mapped[int] = mapped_column(
-        Integer,
-        default=0,
-        nullable=False,
-    )
+    years_of_experience: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        nullable=False,
+        DateTime, default=datetime.utcnow, nullable=False,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-        nullable=False,
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False,
     )
 
     user: Mapped["User"] = relationship("User", back_populates="profile")
+    skills: Mapped[list["Skill"]] = relationship("Skill", back_populates="profile")
+    projects: Mapped[list["Project"]] = relationship("Project", back_populates="profile")
+    experiences: Mapped[list["Experience"]] = relationship("Experience", back_populates="profile")

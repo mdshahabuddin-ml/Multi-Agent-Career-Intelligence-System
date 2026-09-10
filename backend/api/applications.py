@@ -263,7 +263,9 @@ async def list_applications(
     apps = application_service.get_user_applications(current_user.id)
 
     if status:
-        apps = [a for a in apps if a.status == status]
+        def _status_value(s):
+            return s.value if hasattr(s, "value") else str(s)
+        apps = [a for a in apps if _status_value(a.status) == status]
 
     return [
         ApplicationListResponse(
@@ -271,57 +273,13 @@ async def list_applications(
             job_id=a.job_id,
             job_title=a.job.title if a.job else "Unknown",
             company_name=a.job.company.name if a.job and a.job.company else "Unknown",
-            status=a.status,
+            status=a.status.value if hasattr(a.status, "value") else str(a.status),
             applied_date=a.applied_date,
             response_date=a.response_date,
             interview_date=a.interview_date,
         )
         for a in apps
     ]
-
-
-@router.get("/{application_id}", response_model=ApplicationResponse)
-async def get_application(
-    application_id: int,
-    current_user = Depends(auth.get_current_active_user),
-    application_service: ApplicationService = Depends(get_application_service),
-):
-    """Get application details."""
-    application = application_service.get_application(application_id, current_user.id)
-    if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
-    return ApplicationResponse.model_validate(application)
-
-
-@router.patch("/{application_id}", response_model=ApplicationResponse)
-async def update_application(
-    application_id: int,
-    request: ApplicationUpdate,
-    current_user = Depends(auth.get_current_active_user),
-    application_service: ApplicationService = Depends(get_application_service),
-):
-    """Update application status."""
-    application = application_service.update_application_status(
-        application_id=application_id,
-        user_id=current_user.id,
-        status=request.status,
-        notes=request.notes,
-    )
-    if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
-    return ApplicationResponse.model_validate(application)
-
-
-@router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def withdraw_application(
-    application_id: int,
-    current_user = Depends(auth.get_current_active_user),
-    application_service: ApplicationService = Depends(get_application_service),
-):
-    """Withdraw an application."""
-    success = application_service.withdraw_application(application_id, current_user.id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Application not found")
 
 
 # ==========================================
@@ -347,24 +305,102 @@ async def get_application_insights(
     return application_service.get_application_insights(current_user.id)
 
 
-# ==========================================
-# Interview Preparation
-# ==========================================
-
-@router.post("/interview-prep", response_model=InterviewPrepResponse)
-async def prepare_interview(
-    request: InterviewPrepRequest,
+@router.get("/{application_id}", response_model=ApplicationResponse)
+async def get_application(
+    application_id: int,
     current_user = Depends(auth.get_current_active_user),
     application_service: ApplicationService = Depends(get_application_service),
 ):
-    """Generate interview preparation materials."""
-    result = application_service.prepare_for_interview(
-        user_id=current_user.id,
-        target_role=request.target_role,
-        target_company=request.target_company,
-        job_description=request.job_description,
-    )
-    return InterviewPrepResponse(**result)
+    """Get application details."""
+    application = application_service.get_application(application_id, current_user.id)
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return ApplicationResponse.model_validate(application)
+
+
+@router.put("/{application_id}", response_model=ApplicationResponse)
+async def update_application(
+    application_id: int,
+    request: ApplicationUpdate,
+    current_user = Depends(auth.get_current_active_user),
+    application_service: ApplicationService = Depends(get_application_service),
+):
+    """Update application details."""
+    application = application_service.get_application(application_id, current_user.id)
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    from backend.models.application import ApplicationStatus
+    db = application_service.db
+    if request.status:
+        try:
+            application.status = ApplicationStatus(request.status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status: {request.status}")
+    if request.notes is not None:
+        application.notes = request.notes
+    db.commit()
+    db.refresh(application)
+    return ApplicationResponse.model_validate(application)
+
+
+@router.patch("/{application_id}/status", response_model=ApplicationResponse)
+async def update_application_status(
+    application_id: int,
+    body: dict,
+    current_user = Depends(auth.get_current_active_user),
+    application_service: ApplicationService = Depends(get_application_service),
+):
+    """Update application status."""
+    application = application_service.get_application(application_id, current_user.id)
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    new_status = body.get("status")
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Status is required")
+
+    from backend.models.application import ApplicationStatus
+    try:
+        status_enum = ApplicationStatus(new_status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid status: {new_status}")
+    application.status = status_enum
+    from datetime import date as date_type
+    if new_status == "submitted" and not application.applied_date:
+        application.applied_date = date_type.today()
+    elif new_status == "interview_scheduled":
+        interview_date = body.get("interview_date")
+        if interview_date:
+            application.interview_date = interview_date
+    elif new_status in ("rejected", "offer_received"):
+        application.response_date = date_type.today()
+
+    notes = body.get("notes")
+    if notes is not None:
+        application.notes = notes
+
+    db = application_service.db
+    db.commit()
+    db.refresh(application)
+    return ApplicationResponse.model_validate(application)
+
+
+@router.delete("/{application_id}", status_code=204)
+async def delete_application(
+    application_id: int,
+    current_user = Depends(auth.get_current_active_user),
+    application_service: ApplicationService = Depends(get_application_service),
+):
+    """Delete an application."""
+    application = application_service.get_application(application_id, current_user.id)
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    db = application_service.db
+    db.delete(application)
+    db.commit()
+    return None
 
 
 # ==========================================

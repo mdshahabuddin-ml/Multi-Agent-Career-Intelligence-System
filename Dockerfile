@@ -7,6 +7,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -21,6 +22,8 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    curl \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder
@@ -28,6 +31,9 @@ COPY --from=builder /root/.local /root/.local
 
 # Copy application code
 COPY backend ./backend
+
+# Create logs directory
+RUN mkdir -p /app/logs
 
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH

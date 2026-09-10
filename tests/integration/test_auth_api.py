@@ -10,7 +10,7 @@ class TestAuthAPI:
     def test_register_success(self, client: TestClient):
         """Test successful user registration."""
         response = client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "email": "newuser@example.com",
                 "password": "SecurePass123!",
@@ -27,7 +27,7 @@ class TestAuthAPI:
     def test_register_duplicate_email(self, client: TestClient, test_user):
         """Test registration with duplicate email fails."""
         response = client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "email": test_user.email,
                 "password": "SecurePass123!",
@@ -40,7 +40,7 @@ class TestAuthAPI:
     def test_register_invalid_email(self, client: TestClient):
         """Test registration with invalid email."""
         response = client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "email": "invalid-email",
                 "password": "SecurePass123!",
@@ -52,7 +52,7 @@ class TestAuthAPI:
     def test_register_weak_password(self, client: TestClient):
         """Test registration with weak password."""
         response = client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "email": "test@example.com",
                 "password": "weak",
@@ -64,7 +64,7 @@ class TestAuthAPI:
     def test_login_success(self, client: TestClient, test_user):
         """Test successful login."""
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": test_user.email,
                 "password": "testpassword123",
@@ -79,7 +79,7 @@ class TestAuthAPI:
     def test_login_wrong_password(self, client: TestClient, test_user):
         """Test login with wrong password."""
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": test_user.email,
                 "password": "wrongpassword",
@@ -91,7 +91,7 @@ class TestAuthAPI:
     def test_login_nonexistent_user(self, client: TestClient):
         """Test login with nonexistent user."""
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": "nonexistent@example.com",
                 "password": "password123",
@@ -101,7 +101,7 @@ class TestAuthAPI:
 
     def test_get_me_authenticated(self, client: TestClient, auth_headers):
         """Test getting current user info with valid token."""
-        response = client.get("/auth/me", headers=auth_headers)
+        response = client.get("/api/auth/me", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert "id" in data
@@ -110,7 +110,7 @@ class TestAuthAPI:
 
     def test_get_me_unauthenticated(self, client: TestClient):
         """Test getting current user info without token."""
-        response = client.get("/auth/me")
+        response = client.get("/api/auth/me")
         assert response.status_code == 401
 
 
@@ -122,7 +122,7 @@ class TestAuthSecurity:
         # Make multiple failed login attempts
         for _ in range(6):
             client.post(
-                "/auth/login",
+                "/api/auth/login",
                 json={
                     "email": test_user.email,
                     "password": "wrongpassword",
@@ -131,7 +131,7 @@ class TestAuthSecurity:
         
         # Next attempt should be rate limited
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": test_user.email,
                 "password": "wrongpassword",
@@ -143,7 +143,7 @@ class TestAuthSecurity:
     def test_password_not_in_response(self, client: TestClient, test_user):
         """Test that password hash is never returned."""
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": test_user.email,
                 "password": "testpassword123",

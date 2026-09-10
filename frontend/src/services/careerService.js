@@ -20,9 +20,9 @@ const careerService = {
     |--------------------------------------------------------------------------
     */
 
-    async getJobSearchStrategy(targetRole = null) {
+    async getJobSearchStrategy(targetRole = null, signal) {
         const params = targetRole ? { target_role: targetRole } : {};
-        const response = await api.get("/api/career/job-search-strategy", { params });
+        const response = await api.get("/api/career/job-search-strategy", { params, signal });
         return response.data;
     },
 
@@ -32,9 +32,10 @@ const careerService = {
     |--------------------------------------------------------------------------
     */
 
-    async getSkillRecommendations(targetRole) {
+    async getSkillRecommendations(targetRole, signal) {
         const response = await api.get("/api/career/skill-recommendations", {
             params: { target_role: targetRole },
+            signal,
         });
         return response.data;
     },
@@ -45,9 +46,10 @@ const careerService = {
     |--------------------------------------------------------------------------
     */
 
-    async getPathOptions(currentRole) {
+    async getPathOptions(currentRole, signal) {
         const response = await api.get("/api/career/path-options", {
             params: { current_role: currentRole },
+            signal,
         });
         return response.data;
     },
@@ -58,11 +60,11 @@ const careerService = {
     |--------------------------------------------------------------------------
     */
 
-    async getLearningResources(skill, difficulty = null, budget = 0) {
+    async getLearningResources(skill, difficulty = null, budget = 0, signal) {
         const params = { skill };
         if (difficulty) params.difficulty = difficulty;
         if (budget) params.budget = budget;
-        const response = await api.get("/api/career/learning-resources", { params });
+        const response = await api.get("/api/career/learning-resources", { params, signal });
         return response.data;
     },
 
@@ -83,8 +85,8 @@ const careerService = {
     |--------------------------------------------------------------------------
     */
 
-    async getInsights() {
-        const response = await api.get("/api/career/insights");
+    async getInsights(signal) {
+        const response = await api.get("/api/career/insights", { signal });
         return response.data;
     },
 
@@ -105,8 +107,8 @@ const careerService = {
     |--------------------------------------------------------------------------
     */
 
-    async getGoals() {
-        const response = await api.get("/api/career/goals");
+    async getGoals(signal) {
+        const response = await api.get("/api/career/goals", { signal });
         return response.data;
     },
 

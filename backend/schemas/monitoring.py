@@ -622,3 +622,169 @@ class IncidentTimelineEvent(BaseModel):
     description: str
     user_id: Optional[int] = None
     user_name: Optional[str] = None
+
+
+# ============= Agent Execution History =============
+
+class AgentExecutionStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
+
+
+class AgentExecutionCreate(BaseModel):
+    execution_id: str
+    trace_id: Optional[str] = None
+    agent_name: str
+    agent_type: str
+    agent_version: Optional[str] = None
+    parent_execution_id: Optional[str] = None
+    workflow_id: Optional[str] = None
+    workflow_name: Optional[str] = None
+    phase: Optional[str] = None
+    input_data: Optional[Dict[str, Any]] = None
+    user_id: Optional[int] = None
+    organization_id: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None
+    tags: Optional[Dict[str, str]] = None
+
+
+class AgentExecutionUpdate(BaseModel):
+    status: Optional[AgentExecutionStatus] = None
+    output_data: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    ended_at: Optional[datetime] = None
+    duration_ms: Optional[float] = None
+    cpu_time_ms: Optional[float] = None
+    memory_mb: Optional[float] = None
+    llm_calls: Optional[int] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+    estimated_cost_usd: Optional[float] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AgentExecutionResponse(BaseModel):
+    id: int
+    execution_id: str
+    trace_id: Optional[str]
+    agent_name: str
+    agent_type: str
+    agent_version: Optional[str]
+    parent_execution_id: Optional[str]
+    workflow_id: Optional[str]
+    workflow_name: Optional[str]
+    phase: Optional[str]
+    input_data: Optional[Dict[str, Any]]
+    output_data: Optional[Dict[str, Any]]
+    error_message: Optional[str]
+    status: AgentExecutionStatus
+    started_at: datetime
+    ended_at: Optional[datetime]
+    duration_ms: Optional[float]
+    cpu_time_ms: Optional[float]
+    memory_mb: Optional[float]
+    llm_calls: int
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost_usd: Optional[float]
+    user_id: Optional[int]
+    organization_id: Optional[int]
+    metadata: Optional[Dict[str, Any]]
+    tags: Optional[Dict[str, str]]
+
+    class Config:
+        from_attributes = True
+
+
+class AgentExecutionQuery(BaseModel):
+    agent_name: Optional[str] = None
+    agent_type: Optional[str] = None
+    workflow_id: Optional[str] = None
+    trace_id: Optional[str] = None
+    status: Optional[AgentExecutionStatus] = None
+    user_id: Optional[int] = None
+    organization_id: Optional[int] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    limit: int = Field(100, le=500)
+
+
+# ============= Tool Execution History =============
+
+class ToolExecutionStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    RATE_LIMITED = "rate_limited"
+
+
+class ToolExecutionCreate(BaseModel):
+    execution_id: str
+    trace_id: Optional[str] = None
+    agent_execution_id: Optional[str] = None
+    tool_name: str
+    tool_type: str
+    tool_version: Optional[str] = None
+    input_data: Optional[Dict[str, Any]] = None
+    user_id: Optional[int] = None
+    organization_id: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ToolExecutionUpdate(BaseModel):
+    status: Optional[ToolExecutionStatus] = None
+    output_data: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    ended_at: Optional[datetime] = None
+    duration_ms: Optional[float] = None
+    retries: Optional[int] = None
+    rate_limit_remaining: Optional[int] = None
+    estimated_cost_usd: Optional[float] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ToolExecutionResponse(BaseModel):
+    id: int
+    execution_id: str
+    trace_id: Optional[str]
+    agent_execution_id: Optional[str]
+    tool_name: str
+    tool_type: str
+    tool_version: Optional[str]
+    input_data: Optional[Dict[str, Any]]
+    output_data: Optional[Dict[str, Any]]
+    error_message: Optional[str]
+    status: ToolExecutionStatus
+    started_at: datetime
+    ended_at: Optional[datetime]
+    duration_ms: Optional[float]
+    retries: int
+    rate_limit_remaining: Optional[int]
+    estimated_cost_usd: Optional[float]
+    user_id: Optional[int]
+    organization_id: Optional[int]
+    metadata: Optional[Dict[str, Any]]
+
+    class Config:
+        from_attributes = True
+
+
+class ToolExecutionQuery(BaseModel):
+    tool_name: Optional[str] = None
+    tool_type: Optional[str] = None
+    trace_id: Optional[str] = None
+    agent_execution_id: Optional[str] = None
+    status: Optional[ToolExecutionStatus] = None
+    user_id: Optional[int] = None
+    organization_id: Optional[int] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    limit: int = Field(100, le=500)

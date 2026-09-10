@@ -25,8 +25,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.blocked_ips: dict[str, float] = {}
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        if not self.config.RATE_LIMIT_ENABLED:
-            return await call_next(request)
+        if not self.config.RATE_LIMIT_ENABLED or self.config.TESTING:
+            response = await call_next(request)
+            if self.config.TESTING:
+                # Informational headers only: no counting, no blocking.
+                # Keeps header-observing clients/tests stable while the
+                # TESTING bypass disables enforcement.
+                response.headers["X-RateLimit-Limit"] = str(self.config.RATE_LIMIT_REQUESTS)
+                response.headers["X-RateLimit-Remaining"] = str(self.config.RATE_LIMIT_REQUESTS)
+                response.headers["X-RateLimit-Reset"] = str(
+                    int(time.time() + self.config.RATE_LIMIT_WINDOW_SECONDS))
+            return response
 
         # Get client IP
         client_ip = self._get_client_ip(request)

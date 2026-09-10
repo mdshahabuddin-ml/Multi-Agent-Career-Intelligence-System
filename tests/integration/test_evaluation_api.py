@@ -9,7 +9,7 @@ class TestEvaluationAPI:
 
     def test_list_benchmarks(self, client: TestClient, auth_headers):
         """Test listing benchmark test cases."""
-        response = client.get("/evaluation/benchmarks", headers=auth_headers)
+        response = client.get("/api/evaluation/benchmarks", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -25,7 +25,7 @@ class TestEvaluationAPI:
     def test_list_benchmarks_by_category(self, client: TestClient, auth_headers):
         """Test listing benchmarks filtered by category."""
         response = client.get(
-            "/evaluation/benchmarks",
+            "/api/evaluation/benchmarks",
             params={"category": "research"},
             headers=auth_headers,
         )
@@ -36,7 +36,7 @@ class TestEvaluationAPI:
 
     def test_list_benchmark_categories(self, client: TestClient, auth_headers):
         """Test listing benchmark categories and evaluators."""
-        response = client.get("/evaluation/benchmarks/categories", headers=auth_headers)
+        response = client.get("/api/evaluation/benchmarks/categories", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -49,7 +49,7 @@ class TestEvaluationAPI:
 
     def test_list_evaluators(self, client: TestClient, auth_headers):
         """Test listing available evaluators."""
-        response = client.get("/evaluation/evaluators", headers=auth_headers)
+        response = client.get("/api/evaluation/evaluators", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -63,10 +63,10 @@ class TestEvaluationAPI:
     def test_run_evaluation(self, client: TestClient, auth_headers):
         """Test running evaluation on benchmarks."""
         response = client.post(
-            "/evaluation/run",
+            "/api/evaluation/run",
             json={
                 "category": "research",
-                "mock_outputs": True,
+                "mock_outputs": {},
             },
             headers=auth_headers,
         )
@@ -85,11 +85,11 @@ class TestEvaluationAPI:
     def test_run_evaluation_specific_evaluators(self, client: TestClient, auth_headers):
         """Test running evaluation with specific evaluators."""
         response = client.post(
-            "/evaluation/run",
+            "/api/evaluation/run",
             json={
                 "category": "rag",
                 "evaluators": ["rag_generation"],
-                "mock_outputs": True,
+                "mock_outputs": {},
             },
             headers=auth_headers,
         )
@@ -101,10 +101,10 @@ class TestEvaluationAPI:
     def test_run_evaluation_invalid_category(self, client: TestClient, auth_headers):
         """Test running evaluation with invalid category."""
         response = client.post(
-            "/evaluation/run",
+            "/api/evaluation/run",
             json={
                 "category": "invalid_category",
-                "mock_outputs": True,
+                "mock_outputs": {},
             },
             headers=auth_headers,
         )
@@ -115,10 +115,10 @@ class TestEvaluationAPI:
     def test_run_evaluation_async(self, client: TestClient, auth_headers):
         """Test running evaluation asynchronously."""
         response = client.post(
-            "/evaluation/run/async",
+            "/api/evaluation/run/async",
             json={
                 "category": "research",
-                "mock_outputs": True,
+                "mock_outputs": {},
             },
             headers=auth_headers,
         )
@@ -132,14 +132,14 @@ class TestEvaluationAPI:
         """Test getting async evaluation task status."""
         # First start an async evaluation
         response = client.post(
-            "/evaluation/run/async",
-            json={"category": "research", "mock_outputs": True},
+            "/api/evaluation/run/async",
+            json={"category": "research", "mock_outputs": {}},
             headers=auth_headers,
         )
         task_id = response.json()["task_id"]
 
         # Check status
-        response = client.get(f"/evaluation/tasks/{task_id}", headers=auth_headers)
+        response = client.get(f"/api/evaluation/tasks/{task_id}", headers=auth_headers)
         assert response.status_code == 200
         result = response.json()
         assert "task_id" in result
@@ -148,7 +148,7 @@ class TestEvaluationAPI:
     def test_run_custom_evaluation(self, client: TestClient, auth_headers):
         """Test running evaluation on custom test cases."""
         response = client.post(
-            "/evaluation/custom",
+            "/api/evaluation/custom",
             json={
                 "test_cases": [
                     {
@@ -179,7 +179,7 @@ class TestEvaluationAPI:
 
     def test_get_evaluation_history(self, client: TestClient, auth_headers):
         """Test getting evaluation history."""
-        response = client.get("/evaluation/history", headers=auth_headers)
+        response = client.get("/api/evaluation/history", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()

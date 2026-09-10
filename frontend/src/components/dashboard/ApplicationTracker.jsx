@@ -13,23 +13,28 @@ function ApplicationTracker() {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchApplications() {
       try {
         setLoading(true);
         const [apps, statsData] = await Promise.all([
-          applicationService.getApplications(),
-          applicationService.getStatistics(),
+          applicationService.getApplications({}, controller.signal),
+          applicationService.getStatistics(controller.signal),
         ]);
         setApplications(apps);
         setStats(statsData);
       } catch (err) {
-        setError("Failed to load applications");
+        if (err.name === "CanceledError" || err.name === "AbortError") return;
+        const message = err.response?.data?.detail || err.message || "Failed to load applications";
+        setError(message);
       } finally {
         setLoading(false);
       }
     }
 
     fetchApplications();
+    return () => controller.abort();
   }, []);
 
   const filteredApps = filter === "all"
@@ -133,7 +138,9 @@ function ApplicationTracker() {
                 </div>
                 <div className="app-meta">
                   <span className="app-date">
-                    Applied {formatDistanceToNow(new Date(app.applied_date), { addSuffix: true })}
+                    {app.applied_date
+                      ? `Applied ${formatDistanceToNow(new Date(app.applied_date), { addSuffix: true })}`
+                      : "Not submitted yet"}
                   </span>
                   {app.interview_date && (
                     <span className="interview-date">

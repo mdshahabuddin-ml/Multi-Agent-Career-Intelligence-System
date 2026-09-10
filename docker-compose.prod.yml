@@ -1,6 +1,10 @@
 version: '3.8'
 
 services:
+  # ============================
+  # Infrastructure Services
+  # ============================
+
   postgres:
     image: postgres:16-alpine
     container_name: careerintel-postgres-prod
@@ -10,6 +14,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -18,6 +23,14 @@ services:
     restart: unless-stopped
     networks:
       - careerintel-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
 
   redis:
     image: redis:7-alpine
@@ -32,6 +45,14 @@ services:
     restart: unless-stopped
     networks:
       - careerintel-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   qdrant:
     image: qdrant/qdrant:v1.9.0
@@ -46,6 +67,102 @@ services:
     restart: unless-stopped
     networks:
       - careerintel-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  # ============================
+  # Monitoring Stack
+  # ============================
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: careerintel-prometheus-prod
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: careerintel-grafana-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://careerintel.ai/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: careerintel-loki-prod
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: careerintel-promtail-prod
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml
+      - ./backend:/app/backend:ro
+      - ./logs:/var/log/careerintel
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+
+  # ============================
+  # Backend API
+  # ============================
 
   backend:
     build:
@@ -62,10 +179,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL}
       - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL}
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
     env_file:
       - .env
-    ports:
-      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,6 +193,7 @@ services:
     networks:
       - careerintel-network
     deploy:
+      replicas: 2
       resources:
         limits:
           cpus: '2'
@@ -84,6 +201,189 @@ services:
         reservations:
           cpus: '1'
           memory: 1G
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+
+  # ============================
+  # Celery Workers (Queue-specific)
+  # ============================
+
+  celery-worker-research:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-research-prod
+    command: celery -A backend.workers.celery_app worker -Q research -l info --concurrency=4 --prefetch-multiplier=1
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  celery-worker-jobs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-jobs-prod
+    command: celery -A backend.workers.celery_app worker -Q jobs -l info --concurrency=4 --prefetch-multiplier=1
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  celery-worker-documents:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-documents-prod
+    command: celery -A backend.workers.celery_app worker -Q documents -l info --concurrency=4 --prefetch-multiplier=1
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  celery-worker-embeddings:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-embeddings-prod
+    command: celery -A backend.workers.celery_app worker -Q embeddings -l info --concurrency=2 --prefetch-multiplier=1
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+
+  celery-worker-notifications:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-notifications-prod
+    command: celery -A backend.workers.celery_app worker -Q notifications -l info --concurrency=8 --prefetch-multiplier=4
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careerintel-celery-beat-prod
+    command: celery -A backend.workers.celery_app beat -l info --scheduler celery.beat.PersistentScheduler
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================
+  # Frontend (Nginx)
+  # ============================
 
   frontend:
     build:
@@ -99,61 +399,80 @@ services:
     restart: unless-stopped
     networks:
       - careerintel-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+      update_config:
+        parallelism: 1
+        delay: 5s
 
-  celery-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: careerintel-celery-worker
-    command: celery -A backend.workers.celery_app worker --loglevel=info
+  # ============================
+  # Celery Monitoring (Flower)
+  # ============================
+
+  flower:
+    image: mher/flower:2.0.1
+    container_name: careerintel-flower-prod
+    ports:
+      - "5555:5555"
     environment:
-      - APP_ENV=production
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://redis:6379/0
-      - QDRANT_URL=http://qdrant:6333
-      - SECRET_KEY=${SECRET_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    env_file:
-      - .env
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+      - FLOWER_BASIC_AUTH=${FLOWER_USER}:${FLOWER_PASSWORD}
+      - FLOWER_URL_PREFIX=/flower
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
+      - redis
+    command: celery -A backend.workers.celery_app flower --port=5555 --broker=redis://redis:6379/0 --url-prefix=/flower
+    restart: unless-stopped
+    networks:
+      - careerintel-network
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================
+  # Reverse Proxy (Nginx)
+  # ============================
+
+  nginx:
+    image: nginx:alpine
+    container_name: careerintel-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.reverse-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/ssl/certs:ro
+    depends_on:
+      - frontend
+      - backend
     restart: unless-stopped
     networks:
       - careerintel-network
     deploy:
       replicas: 2
-
-  celery-beat:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: careerintel-celery-beat
-    command: celery -A backend.workers.celery_app beat --loglevel=info
-    environment:
-      - APP_ENV=production
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://redis:6379/0
-    env_file:
-      - .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - careerintel-network
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
 volumes:
   postgres_data:
   redis_data:
   qdrant_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   careerintel-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -2,10 +2,15 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from datetime import datetime
 
 from backend.database import get_db
 from backend.api import auth
 from backend.services.billing_service import BillingService, OrganizationService
+from backend.models import (
+    User, Team, TeamMember, FeatureFlag,
+    OrganizationPlan, BillingInterval,
+)
 from backend.schemas.organization import (
     OrganizationCreate, OrganizationUpdate, OrganizationResponse,
     OrganizationMemberCreate, OrganizationMemberUpdate, OrganizationMemberResponse,

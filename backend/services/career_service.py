@@ -12,6 +12,7 @@ from backend.agents.career import (
     AdvisorFocus,
 )
 from backend.models import User, Skill, LearningPlan, LearningPlan as LearningPlanModel
+from backend.models.learning_plan import LearningStatus
 from backend.database import get_db
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,9 @@ class CareerService:
         if not user:
             raise ValueError("User not found")
 
+        if isinstance(target_date, str):
+            target_date = date.fromisoformat(target_date)
+
         goal = self.advisor.create_career_goal(
             user_id=user_id,
             title=title,
@@ -88,7 +92,7 @@ class CareerService:
             estimated_weeks=0,
             resources=[],
             milestones=[],
-            status="not_started",
+            status=LearningStatus.NOT_STARTED,
             progress_percentage=0.0,
             target_completion_date=target_date,
         )
@@ -124,7 +128,7 @@ class CareerService:
             goal.progress_percentage = completed / len(goal.milestones)
 
             if goal.progress_percentage >= 1.0:
-                goal.status = "completed"
+                goal.status = LearningStatus.COMPLETED
                 goal.completed_at = datetime.utcnow()
 
         self.db.commit()
@@ -299,7 +303,7 @@ class CareerService:
                 }
                 for phase in plan.phases for m in phase.milestones
             ],
-            status="not_started",
+            status=LearningStatus.NOT_STARTED,
             progress_percentage=0.0,
         )
         self.db.add(db_plan)

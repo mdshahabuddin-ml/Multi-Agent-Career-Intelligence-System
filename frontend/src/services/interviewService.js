@@ -123,6 +123,17 @@ const interviewService = {
         return response.data;
     },
 
+    /*
+    |--------------------------------------------------------------------------
+    | Self Introduction
+    |--------------------------------------------------------------------------
+    */
+
+    async getSelfIntro(data) {
+        const response = await api.post("/api/interview/self-intro", data);
+        return response.data;
+    },
+
 };
 
 export default interviewService;

@@ -1,7 +1,7 @@
 """Security API endpoints."""
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -274,7 +274,7 @@ async def revoke_api_key(
     )
 
 
-@router.post("/api-keys/{key_id}/rotate", response_model=APIKeyCreateResponse)
+@router.post("/api-keys/{key_id}/rotate", response_model=APIKeyCreateResponse, status_code=status.HTTP_201_CREATED)
 async def rotate_api_key(
     key_id: str,
     current_user: User = Depends(get_current_active_user),
@@ -374,16 +374,22 @@ class CSRFTokenResponse(BaseModel):
 
 
 @router.get("/csrf-token", response_model=CSRFTokenResponse)
-async def get_csrf_token(
-    request: Request,
-    current_user: User = Depends(get_current_active_user),
-):
-    """Get a CSRF token for form submissions."""
+async def get_csrf_token(response: Response):
+    """Get a CSRF token for form submissions (public endpoint)."""
     from backend.security.middleware import generate_csrf_token
+    from backend.security.config import get_security_config
 
     token = generate_csrf_token()
+    config = get_security_config()
 
-    # In production, store in session/Redis with expiry
-    # For now, return token (client should store in cookie)
+    # Set CSRF token as cookie
+    response.set_cookie(
+        key=config.CSRF_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=3600,  # 1 hour
+    )
 
     return CSRFTokenResponse(csrf_token=token)

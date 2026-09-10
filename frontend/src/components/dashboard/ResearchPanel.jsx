@@ -12,19 +12,23 @@ function ResearchPanel() {
   const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
-    loadResearch();
+    const controller = new AbortController();
+    loadResearch(controller.signal);
+    return () => controller.abort();
   }, []);
 
-  const loadResearch = async () => {
+  const loadResearch = async (signal) => {
     try {
       setLoading(true);
-      const data = await researchService.listResearch();
-      setResearchList(data);
-    } catch (err) {
-      setError("Failed to load research");
-    } finally {
-      setLoading(false);
-    }
+      const data = await researchService.listResearch({}, signal);
+      setResearchList(data.items || data);
+} catch (err) {
+        if (err.name === "CanceledError" || err.name === "AbortError") return;
+        const message = err.response?.data?.detail || err.message || "Failed to load research";
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
   };
 
   const startResearch = async (query, researchType) => {
@@ -37,11 +41,12 @@ function ResearchPanel() {
       setResearchList(prev => [research, ...prev]);
       setActiveResearch(research);
       setShowDetail(true);
-    } catch (err) {
-      setError("Failed to start research");
-    } finally {
-      setLoading(false);
-    }
+} catch (err) {
+        const message = err.response?.data?.detail || err.message || "Failed to start research";
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
   };
 
   const viewResearch = async (researchId) => {
@@ -50,20 +55,23 @@ function ResearchPanel() {
       const report = await researchService.getReport(researchId);
       setActiveResearch(report);
       setShowDetail(true);
-    } catch (err) {
-      setError("Failed to load research report");
-    } finally {
-      setLoading(false);
-    }
+} catch (err) {
+        const message = err.response?.data?.detail || err.message || "Failed to load research report";
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
   };
 
   const cancelResearch = async (researchId) => {
     try {
       await researchService.cancelResearch(researchId);
       loadResearch();
-    } catch (err) {
-      setError("Failed to cancel research");
-    }
+} catch (err) {
+        if (err.name === "CanceledError" || err.name === "AbortError") return;
+        const message = err.response?.data?.detail || err.message || "Failed to cancel research";
+        setError(message);
+      }
   };
 
   if (loading && !activeResearch) {
@@ -79,9 +87,9 @@ function ResearchPanel() {
       <div className="research-header">
         <h3>Multi-Agent Research</h3>
         <div className="research-actions">
-          <button className="btn btn-primary btn-sm" onClick={() => showNewResearchModal()}>
+          <a href="/research" className="btn btn-primary btn-sm">
             New Research
-          </button>
+          </a>
         </div>
       </div>
 
@@ -96,9 +104,9 @@ function ResearchPanel() {
         {researchList.length === 0 ? (
           <div className="empty-state">
             <p>No research projects yet</p>
-            <button className="btn btn-primary btn-sm" onClick={() => showNewResearchModal()}>
+            <a href="/research" className="btn btn-primary btn-sm">
               Start Your First Research
-            </button>
+            </a>
           </div>
         ) : (
           <>
@@ -265,12 +273,6 @@ function NewResearchModal({ onClose, onStart }) {
       </div>
     </div>
   );
-}
-
-function showNewResearchModal() {
-  // This would typically use a modal state management system
-  // For now, we'll just show an alert
-  alert("New research modal would open here");
 }
 
 export default ResearchPanel;

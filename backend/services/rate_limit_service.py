@@ -11,7 +11,7 @@ from sqlalchemy import func, and_, or_, desc
 from fastapi import Request, HTTPException, status, Depends
 
 from backend.database import get_db
-from backend.models.organization import Organization, OrganizationPlan
+from backend.models.organization import Organization, OrganizationMember, OrganizationPlan, OrganizationStatus
 from backend.models.user import User
 from backend.dependencies import get_current_active_user
 from backend.config import settings
@@ -493,30 +493,78 @@ def rate_limit_dependency(
     return result
 
 
+def _resolve_user_org_id(user: User, db: Session) -> Optional[int]:
+    """Resolve a user's organization_id, falling back to OrganizationMember lookup and auto-creating a default org."""
+    org_id = getattr(user, "organization_id", None)
+    if org_id:
+        return org_id
+
+    member = (
+        db.query(OrganizationMember)
+        .filter(
+            OrganizationMember.user_id == user.id,
+            OrganizationMember.is_active == True,
+        )
+        .order_by(OrganizationMember.joined_at)
+        .first()
+    )
+    if member:
+        user.organization_id = member.organization_id
+        db.commit()
+        return member.organization_id
+
+    slug = f"personal-{user.id}"
+    existing_org = db.query(Organization).filter(Organization.slug == slug).first()
+    if existing_org:
+        org = existing_org
+    else:
+        org = Organization(
+            name=user.full_name or user.email.split("@")[0],
+            slug=slug,
+            description="Personal organization",
+            status=OrganizationStatus.TRIAL,
+            plan=OrganizationPlan.FREE,
+        )
+        db.add(org)
+        db.flush()
+
+        member = OrganizationMember(
+            organization_id=org.id,
+            user_id=user.id,
+            role="owner",
+            joined_at=datetime.utcnow(),
+        )
+        db.add(member)
+
+    user.organization_id = org.id
+    db.commit()
+    return org.id
+
+
 def create_quota_dependency(resource: str, quantity: int = 1):
     """Create a quota checking dependency for a specific resource."""
     async def quota_dependency(
-        current_user = Depends(get_current_active_user),
+        current_user: User = Depends(get_current_active_user),
         quota_mgr: QuotaManager = Depends(get_quota_manager),
+        db: Session = Depends(get_db),
     ):
         """FastAPI dependency for quota checking."""
-        # Get user's organization
-        org_id = getattr(current_user, "organization_id", None)
+        org_id = _resolve_user_org_id(current_user, db)
         if not org_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User not associated with an organization",
             )
-        
+
         allowed = quota_mgr.check_and_consume(org_id, resource, quantity)
         if not allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Quota exceeded for {resource}",
             )
-        
+
         return True
-    
+
     return quota_dependency
 
 

@@ -135,6 +135,16 @@ async def list_jobs(
     return [JobListResponse.model_validate(j) for j in jobs]
 
 
+@router.get("/saved", response_model=List[SavedJobResponse])
+async def get_saved_jobs(
+    current_user = Depends(auth.get_current_active_user),
+    job_service: JobService = Depends(get_job_service),
+):
+    """Get user's saved jobs."""
+    saved = job_service.get_saved_jobs(current_user.id)
+    return [SavedJobResponse(**s) for s in saved]
+
+
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job(
     job_id: int,
@@ -166,13 +176,3 @@ async def save_job(
         status=application.status,
         saved_date=application.created_at,
     )
-
-
-@router.get("/saved", response_model=List[SavedJobResponse])
-async def get_saved_jobs(
-    current_user = Depends(auth.get_current_active_user),
-    job_service: JobService = Depends(get_job_service),
-):
-    """Get user's saved jobs."""
-    saved = job_service.get_saved_jobs(current_user.id)
-    return [SavedJobResponse(**s) for s in saved]

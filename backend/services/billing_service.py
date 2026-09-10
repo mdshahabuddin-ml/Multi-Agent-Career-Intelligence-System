@@ -139,6 +139,10 @@ class BillingService:
         )
         self.db.add(team_member)
 
+        creator = self.db.query(User).filter(User.id == creator_id).first()
+        if creator:
+            creator.organization_id = org.id
+
         self.db.commit()
         self.db.refresh(org)
         return org
@@ -450,6 +454,10 @@ class BillingService:
         invitation.status = InvitationStatus.ACCEPTED
         invitation.accepted_at = datetime.utcnow()
         invitation.accepted_by = user_id
+
+        acceptor = self.db.query(User).filter(User.id == user_id).first()
+        if acceptor and not acceptor.organization_id:
+            acceptor.organization_id = invitation.organization_id
 
         org = self.get_organization(invitation.organization_id)
         if org:

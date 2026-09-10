@@ -35,6 +35,87 @@ class DifficultyLevel(str, PyEnum):
     EXPERT = "expert"
 
 
+# Common aliases / alternate spellings for skill names. Keys are matched
+# case-insensitively after stripping whitespace; values are the canonical
+# keys used in the resource database below.
+SKILL_ALIASES = {
+    "js": "JavaScript",
+    "javascript/typescript": "JavaScript",
+    "ts": "TypeScript",
+    "typescript/javascript": "TypeScript",
+    "k8s": "Kubernetes",
+    "ml": "Machine Learning",
+    "machine-learning": "Machine Learning",
+    "ai/ml": "Machine Learning",
+    "dl": "Deep Learning",
+    "deep-learning": "Deep Learning",
+    "deep learning (pytorch, tensorflow)": "Deep Learning",
+    "rest api": "REST APIs",
+    "rest-api": "REST APIs",
+    "restful apis": "REST APIs",
+    "apis": "REST APIs",
+    "api design": "REST APIs",
+    "software testing": "Testing",
+    "qa": "Testing",
+    "quality assurance": "Testing",
+    "unit testing": "Testing",
+    "system-design": "System Design",
+    "systems design": "System Design",
+    "architecture": "System Design",
+    "soft skills": "Communication",
+    "team communication": "Communication",
+    "executive communication": "Communication",
+    "technical communication": "Communication",
+    "ci cd": "CI/CD",
+    "cicd": "CI/CD",
+    "continuous integration": "CI/CD",
+    "css3": "CSS",
+    "html5": "HTML",
+    "postgres": "SQL",
+    "postgresql": "SQL",
+    "mysql": "SQL",
+    "databases": "SQL",
+    "database basics": "SQL",
+    "git/github": "Git",
+    "github": "Git",
+    "version control": "Git",
+    "containers": "Docker",
+    "containerization": "Docker",
+    "cloud": "AWS",
+    "frontend": "React",
+    "front-end": "React",
+    "backend": "Python",
+    "back-end": "Python",
+    "programming": "Python",
+    "programming basics": "Python",
+    "data structures": "Python",
+    "algorithms": "Python",
+    "basic algorithms": "Python",
+    "debugging": "Testing",
+    "linux/unix": "Linux",
+    "unix": "Linux",
+    "command line": "Linux",
+    "shell": "Scripting",
+    "bash": "Scripting",
+    "data analysis": "Pandas",
+    "statistics & probability": "Statistics",
+    "probability": "Statistics",
+    "math": "Statistics",
+    "visualization": "Data Visualization",
+    "dashboarding": "Data Visualization",
+    "observability": "Monitoring",
+    "logging": "Monitoring",
+    "networking": "System Design",
+    "distributed systems": "System Design",
+    "microservices": "System Design",
+    "web apis": "REST APIs",
+    "dom": "JavaScript",
+    "web performance optimization": "Web Performance",
+    "performance": "Web Performance",
+    "state management": "Redux",
+}
+
+
 @dataclass
 class LearningResource:
     """A learning resource."""
@@ -254,7 +335,236 @@ class LearningAgent:
                 LearningResource("PostgreSQL Tutorial", ResourceType.ARTICLE, "PostgreSQL", "https://postgresqltutorial.com",
                     DifficultyLevel.BEGINNER, 20, 0, 4.6, ["PostgreSQL", "Advanced SQL"]),
             ],
+            "Git": [
+                LearningResource("Pro Git Book", ResourceType.BOOK, "Scott Chacon & Ben Straub", "https://git-scm.com/book/en/v2",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.9, ["Git", "Version Control"]),
+                LearningResource("Git & GitHub for Beginners", ResourceType.COURSE, "freeCodeCamp", "https://www.freecodecamp.org/news/git-and-github-for-beginners/",
+                    DifficultyLevel.BEGINNER, 8, 0, 4.8, ["Git", "GitHub"], certification=True),
+                LearningResource("Learn Git Branching", ResourceType.PRACTICE, "Pcottle", "https://learngitbranching.js.org",
+                    DifficultyLevel.BEGINNER, 10, 0, 4.9, ["Git", "Branching"]),
+            ],
+            "REST APIs": [
+                LearningResource("FastAPI Official Tutorial", ResourceType.ARTICLE, "FastAPI", "https://fastapi.tiangolo.com/tutorial/",
+                    DifficultyLevel.BEGINNER, 15, 0, 4.9, ["REST APIs", "FastAPI", "Python"]),
+                LearningResource("REST API Tutorial (freeCodeCamp)", ResourceType.ARTICLE, "freeCodeCamp", "https://www.freecodecamp.org/news/rest-api-tutorial/",
+                    DifficultyLevel.BEGINNER, 6, 0, 4.7, ["REST APIs", "HTTP", "JSON"]),
+                LearningResource("RESTful API Design Guide", ResourceType.ARTICLE, "RESTfulAPI.net", "https://restfulapi.net",
+                    DifficultyLevel.BEGINNER, 12, 0, 4.6, ["REST APIs", "HTTP", "API Design"]),
+            ],
+            "Testing": [
+                LearningResource("Quality Assurance Certification", ResourceType.COURSE, "freeCodeCamp", "https://www.freecodecamp.org/learn/quality-assurance/",
+                    DifficultyLevel.BEGINNER, 40, 0, 4.7, ["Testing", "QA", "Automation"], certification=True),
+                LearningResource("Martin Fowler on Testing", ResourceType.ARTICLE, "martinfowler.com", "https://martinfowler.com/tags/testing.html",
+                    DifficultyLevel.INTERMEDIATE, 10, 0, 4.8, ["Testing", "TDD", "Test Design"]),
+                LearningResource("ISTQB Foundation Syllabus", ResourceType.ARTICLE, "ISTQB", "https://www.istqb.org/certification-paths/istqb-foundation-level/",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.5, ["Testing", "Test Design", "Certification"]),
+            ],
+            "System Design": [
+                LearningResource("System Design Primer", ResourceType.PROJECT, "donnemartin (GitHub)", "https://github.com/donnemartin/system-design-primer",
+                    DifficultyLevel.BEGINNER, 30, 0, 4.9, ["System Design", "Scalability", "Architecture"]),
+                LearningResource("System Design 101", ResourceType.ARTICLE, "ByteByteGo", "https://bytebytego.com/guides/system-design-101",
+                    DifficultyLevel.BEGINNER, 12, 0, 4.7, ["System Design", "Architecture"]),
+                LearningResource("Designing Data-Intensive Applications", ResourceType.BOOK, "Martin Kleppmann", "https://dataintensive.net",
+                    DifficultyLevel.INTERMEDIATE, 40, 50, 4.9, ["System Design", "Databases", "Distributed Systems"]),
+            ],
+            "Communication": [
+                LearningResource("Business Communication Skills", ResourceType.COURSE, "Alison", "https://alison.com/course/business-communication-skills",
+                    DifficultyLevel.BEGINNER, 10, 0, 4.5, ["Communication", "Business Writing"], certification=True),
+                LearningResource("Toastmasters International", ResourceType.PRACTICE, "Toastmasters", "https://www.toastmasters.org",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.7, ["Communication", "Public Speaking"]),
+                LearningResource("Crucial Conversations", ResourceType.BOOK, "Patterson, Grenny et al.", "https://www.cruciallearning.com/books/",
+                    DifficultyLevel.INTERMEDIATE, 12, 25, 4.8, ["Communication", "Difficult Conversations"]),
+            ],
+            "TypeScript": [
+                LearningResource("TypeScript Handbook", ResourceType.ARTICLE, "Microsoft", "https://www.typescriptlang.org/docs/handbook/intro.html",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.9, ["TypeScript", "Types"]),
+                LearningResource("Total TypeScript Free Tutorials", ResourceType.VIDEO, "Matt Pocock", "https://www.totaltypescript.com/tutorials",
+                    DifficultyLevel.BEGINNER, 10, 0, 4.8, ["TypeScript", "Practice"]),
+            ],
+            "CSS": [
+                LearningResource("Learn CSS", ResourceType.COURSE, "Google/web.dev", "https://web.dev/learn/css",
+                    DifficultyLevel.BEGINNER, 25, 0, 4.9, ["CSS", "Layout", "Responsive Design"], certification=True),
+                LearningResource("CSS-Tricks Almanac", ResourceType.ARTICLE, "CSS-Tricks", "https://css-tricks.com/almanac/",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.8, ["CSS", "Reference"]),
+                LearningResource("Flexbox Froggy", ResourceType.PRACTICE, "Codepip", "https://flexboxfroggy.com",
+                    DifficultyLevel.BEGINNER, 5, 0, 4.8, ["CSS", "Flexbox"]),
+            ],
+            "HTML": [
+                LearningResource("MDN HTML Basics", ResourceType.ARTICLE, "Mozilla", "https://developer.mozilla.org/en-US/docs/Learn/Getting_started_with_the_web/HTML_basics",
+                    DifficultyLevel.BEGINNER, 10, 0, 4.9, ["HTML", "Web Basics", "Semantics"]),
+                LearningResource("HTML Full Course", ResourceType.VIDEO, "freeCodeCamp", "https://www.freecodecamp.org/news/html-crash-course/",
+                    DifficultyLevel.BEGINNER, 8, 0, 4.7, ["HTML", "Forms", "Semantics"]),
+            ],
+            "Redux": [
+                LearningResource("Redux Essentials Tutorial", ResourceType.ARTICLE, "Redux", "https://redux.js.org/tutorials/essentials/part-1-overview-concepts",
+                    DifficultyLevel.BEGINNER, 15, 0, 4.8, ["Redux", "State Management"]),
+                LearningResource("Redux Toolkit Quick Start", ResourceType.ARTICLE, "Redux", "https://redux-toolkit.js.org/tutorials/quick-start",
+                    DifficultyLevel.BEGINNER, 8, 0, 4.7, ["Redux Toolkit", "React"]),
+            ],
+            "Web Performance": [
+                LearningResource("Learn Performance", ResourceType.COURSE, "Google/web.dev", "https://web.dev/learn/performance",
+                    DifficultyLevel.BEGINNER, 15, 0, 4.8, ["Web Performance", "Core Web Vitals"]),
+                LearningResource("High Performance Browser Networking", ResourceType.BOOK, "Ilya Grigorik", "https://hpbn.co",
+                    DifficultyLevel.INTERMEDIATE, 30, 0, 4.8, ["Web Performance", "Networking"]),
+            ],
+            "Linux": [
+                LearningResource("Introduction to Linux", ResourceType.COURSE, "Linux Foundation", "https://training.linuxfoundation.org/training/introduction-to-linux/",
+                    DifficultyLevel.BEGINNER, 40, 0, 4.8, ["Linux", "Command Line"], certification=True),
+                LearningResource("OverTheWire: Bandit", ResourceType.PRACTICE, "OverTheWire", "https://overthewire.org/wargames/bandit/",
+                    DifficultyLevel.BEGINNER, 15, 0, 4.8, ["Linux", "Shell"]),
+            ],
+            "Scripting": [
+                LearningResource("Bash Scripting Tutorial", ResourceType.ARTICLE, "ryanstutorials", "https://ryanstutorials.net/bash-scripting-tutorial/",
+                    DifficultyLevel.BEGINNER, 10, 0, 4.6, ["Scripting", "Bash"]),
+                LearningResource("Automate the Boring Stuff with Python", ResourceType.BOOK, "Al Sweigart", "https://automatetheboringstuff.com",
+                    DifficultyLevel.INTERMEDIATE, 20, 0, 4.7, ["Scripting", "Python", "Automation"]),
+            ],
+            "Terraform": [
+                LearningResource("Terraform Official Tutorials", ResourceType.ARTICLE, "HashiCorp", "https://developer.hashicorp.com/terraform/tutorials",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.8, ["Terraform", "IaC"]),
+                LearningResource("Terraform Up & Running", ResourceType.BOOK, "Yevgeniy Brikman", "https://www.terraformupandrunning.com",
+                    DifficultyLevel.INTERMEDIATE, 25, 35, 4.7, ["Terraform", "AWS"]),
+            ],
+            "CI/CD": [
+                LearningResource("GitHub Actions Documentation", ResourceType.ARTICLE, "GitHub", "https://docs.github.com/en/actions",
+                    DifficultyLevel.BEGINNER, 15, 0, 4.8, ["CI/CD", "GitHub Actions"]),
+                LearningResource("Jenkins User Handbook", ResourceType.ARTICLE, "Jenkins", "https://www.jenkins.io/doc/book/",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.6, ["CI/CD", "Jenkins", "Pipelines"]),
+            ],
+            "Monitoring": [
+                LearningResource("Grafana Tutorials", ResourceType.COURSE, "Grafana Labs", "https://grafana.com/tutorials/",
+                    DifficultyLevel.BEGINNER, 10, 0, 4.6, ["Monitoring", "Grafana", "Dashboards"]),
+                LearningResource("Prometheus Documentation", ResourceType.ARTICLE, "Prometheus", "https://prometheus.io/docs/introduction/overview/",
+                    DifficultyLevel.INTERMEDIATE, 15, 0, 4.7, ["Monitoring", "Prometheus", "Metrics"]),
+            ],
+            "PyTorch": [
+                LearningResource("PyTorch Official Tutorials", ResourceType.ARTICLE, "PyTorch", "https://pytorch.org/tutorials",
+                    DifficultyLevel.BEGINNER, 25, 0, 4.8, ["PyTorch", "Deep Learning", "Tensors"]),
+                LearningResource("Intro to Deep Learning with PyTorch", ResourceType.COURSE, "Udacity", "https://www.udacity.com/course/deep-learning-pytorch--ud188",
+                    DifficultyLevel.BEGINNER, 40, 0, 4.7, ["PyTorch", "Neural Networks"], certification=True),
+            ],
+            "TensorFlow": [
+                LearningResource("TensorFlow Official Guide", ResourceType.ARTICLE, "TensorFlow", "https://www.tensorflow.org/learn",
+                    DifficultyLevel.BEGINNER, 25, 0, 4.7, ["TensorFlow", "ML", "Keras"]),
+                LearningResource("TensorFlow in Practice", ResourceType.COURSE, "DeepLearning.AI/Coursera", "https://www.coursera.org/professional-certificates/tensorflow-in-practice",
+                    DifficultyLevel.BEGINNER, 60, 0, 4.8, ["TensorFlow", "Deep Learning"], certification=True),
+            ],
+            "Deep Learning": [
+                LearningResource("Deep Learning Specialization", ResourceType.COURSE, "Coursera/Andrew Ng", "https://www.coursera.org/specializations/deep-learning",
+                    DifficultyLevel.BEGINNER, 80, 0, 4.9, ["Deep Learning", "Neural Networks"], certification=True),
+                LearningResource("Dive into Deep Learning", ResourceType.BOOK, "Aston Zhang et al.", "https://d2l.ai",
+                    DifficultyLevel.INTERMEDIATE, 50, 0, 4.8, ["Deep Learning", "PyTorch", "TensorFlow"]),
+            ],
+            "MLOps": [
+                LearningResource("Machine Learning Engineering for Production (MLOps)", ResourceType.COURSE, "DeepLearning.AI/Coursera", "https://www.coursera.org/specializations/machine-learning-engineering-for-production-mlops",
+                    DifficultyLevel.BEGINNER, 60, 0, 4.7, ["MLOps", "Deployment", "Pipelines"], certification=True),
+                LearningResource("Made With ML", ResourceType.ARTICLE, "Goku Mohandas", "https://madewithml.com",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.8, ["MLOps", "ML Pipelines"]),
+            ],
+            "Statistics": [
+                LearningResource("Statistics with Python", ResourceType.COURSE, "Coursera/U-Michigan", "https://www.coursera.org/specializations/statistics-with-python",
+                    DifficultyLevel.BEGINNER, 40, 0, 4.7, ["Statistics", "Python", "Probability"], certification=True),
+                LearningResource("Seeing Theory", ResourceType.ARTICLE, "Brown University", "https://seeing-theory.brown.edu",
+                    DifficultyLevel.BEGINNER, 10, 0, 4.8, ["Statistics", "Probability", "Visualization"]),
+            ],
+            "R": [
+                LearningResource("R for Data Science", ResourceType.BOOK, "Hadley Wickham", "https://r4ds.hadley.nz",
+                    DifficultyLevel.BEGINNER, 30, 0, 4.9, ["R", "Data Science", "Tidyverse"]),
+                LearningResource("Swirl: Learn R in R", ResourceType.PRACTICE, "swirlstats", "https://swirlstats.com",
+                    DifficultyLevel.BEGINNER, 15, 0, 4.6, ["R", "Programming"]),
+            ],
+            "Pandas": [
+                LearningResource("Pandas Official User Guide", ResourceType.ARTICLE, "pandas", "https://pandas.pydata.org/docs/user_guide/index.html",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.8, ["Pandas", "Data Analysis"]),
+                LearningResource("Pandas Exercises", ResourceType.PRACTICE, "guipsamora (GitHub)", "https://github.com/guipsamora/pandas_exercises",
+                    DifficultyLevel.BEGINNER, 15, 0, 4.7, ["Pandas", "Practice"]),
+            ],
+            "Data Visualization": [
+                LearningResource("Data Visualization with Python", ResourceType.VIDEO, "freeCodeCamp", "https://www.freecodecamp.org/news/data-visualization-with-python/",
+                    DifficultyLevel.BEGINNER, 12, 0, 4.7, ["Data Visualization", "Matplotlib", "Seaborn"]),
+                LearningResource("Storytelling with Data", ResourceType.BOOK, "Cole Nussbaumer Knaflic", "https://www.storytellingwithdata.com/books",
+                    DifficultyLevel.BEGINNER, 15, 30, 4.8, ["Data Visualization", "Storytelling"]),
+            ],
+            "Tableau": [
+                LearningResource("Tableau Training Videos", ResourceType.VIDEO, "Tableau", "https://www.tableau.com/learn/training",
+                    DifficultyLevel.BEGINNER, 20, 0, 4.6, ["Tableau", "Dashboards"]),
+                LearningResource("Tableau Public Resources", ResourceType.PRACTICE, "Tableau", "https://public.tableau.com/s/resources",
+                    DifficultyLevel.BEGINNER, 15, 0, 4.5, ["Tableau", "Practice"]),
+            ],
         }
+
+    def _normalize_skill_key(self, skill: str) -> Optional[str]:
+        """Map a free-form skill name to its canonical database key.
+
+        Matching is case-insensitive and alias-aware ("rest api" ->
+        "REST APIs"). Returns None when the skill has no curated entry.
+        """
+        if not skill:
+            return None
+        cleaned = skill.strip()
+        if not cleaned:
+            return None
+        if cleaned in self._resource_database:
+            return cleaned
+        lowered = cleaned.lower()
+        if lowered in SKILL_ALIASES:
+            return SKILL_ALIASES[lowered]
+        for key in self._resource_database:
+            if key.lower() == lowered:
+                return key
+        return None
+
+    def _fallback_resources(self, skill: str) -> List[LearningResource]:
+        """Generate useful starter resources for skills without a curated entry.
+
+        Guarantees the learning-resources endpoint never returns an empty
+        list for a valid skill query.
+        """
+        query = "+".join(skill.strip().split())
+        slug = "-".join(skill.strip().lower().split())
+        # Keep slugs URL-safe for the GitHub topics link.
+        slug = "".join(c if (c.isalnum() or c == "-") else "-" for c in slug)
+        while "--" in slug:
+            slug = slug.replace("--", "-")
+        return [
+            LearningResource(
+                f"{skill} Complete Course", ResourceType.COURSE, "Coursera",
+                f"https://www.coursera.org/search?query={query}",
+                DifficultyLevel.BEGINNER, 20, 0, 4.5, [skill],
+            ),
+            LearningResource(
+                f"Learn {skill} (freeCodeCamp)", ResourceType.ARTICLE, "freeCodeCamp",
+                f"https://www.freecodecamp.org/news/search/?query={query}",
+                DifficultyLevel.BEGINNER, 10, 0, 4.5, [skill],
+            ),
+            LearningResource(
+                f"{skill} Projects & Examples", ResourceType.PRACTICE, "GitHub",
+                f"https://github.com/topics/{slug}",
+                DifficultyLevel.BEGINNER, 15, 0, 4.5, [skill],
+            ),
+        ]
+
+    def _get_resources_for_skill(self, skill: str) -> List[LearningResource]:
+        """Return curated resources for a skill, or a generated fallback."""
+        key = self._normalize_skill_key(skill)
+        if key is not None:
+            return list(self._resource_database.get(key, []))
+        return self._fallback_resources(skill.strip())
+
+    def _coerce_difficulty(self, difficulty: Any) -> Optional[DifficultyLevel]:
+        """Coerce a raw difficulty value (enum or string) to DifficultyLevel.
+
+        Returns None when no usable value was provided so callers can skip
+        the filter instead of matching nothing.
+        """
+        if difficulty is None:
+            return None
+        if isinstance(difficulty, DifficultyLevel):
+            return difficulty
+        try:
+            return DifficultyLevel(str(difficulty).strip().lower())
+        except ValueError:
+            return None
 
     def generate_learning_plan(
         self,
@@ -316,7 +626,7 @@ class LearningAgent:
         """Filter resources by budget constraint."""
         filtered = {}
         for skill in skill_gaps:
-            resources = self._resource_database.get(skill, [])
+            resources = self._get_resources_for_skill(skill)
             if budget == 0:
                 resources = [r for r in resources if r.cost == 0]
             else:
@@ -478,10 +788,11 @@ class LearningAgent:
         budget: float = 0.0,
     ) -> List[LearningResource]:
         """Get resource recommendations for a skill."""
-        resources = self._resource_database.get(skill, [])
+        resources = self._get_resources_for_skill(skill)
 
-        if difficulty:
-            resources = [r for r in resources if r.difficulty == difficulty]
+        level = self._coerce_difficulty(difficulty)
+        if level is not None:
+            resources = [r for r in resources if r.difficulty == level]
 
         if budget == 0:
             resources = [r for r in resources if r.cost == 0]
@@ -530,7 +841,7 @@ class LearningAgent:
         duration_weeks: int = 4,
     ) -> List[LearningMilestone]:
         """Create a short-term focused learning plan."""
-        resources = self._resource_database.get(skill, [])
+        resources = self._get_resources_for_skill(skill)
         if not resources:
             return []
 

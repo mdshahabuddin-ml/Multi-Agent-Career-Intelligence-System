@@ -16,6 +16,7 @@ from backend.agents.application import (
     CoverLetterLength,
 )
 from backend.models import User, Application as ApplicationModel, Job
+from backend.models.application import ApplicationStatus
 from backend.database import get_db
 
 logger = logging.getLogger(__name__)
@@ -141,11 +142,36 @@ class ApplicationService:
         """Generate answers for application questions."""
         candidate_profile = self._get_candidate_profile(user_id)
 
-        from backend.agents.application import ApplicationAnswerAgent
+        from backend.agents.application import ApplicationAnswerAgent, ApplicationQuestion
         answer_agent = ApplicationAnswerAgent()
+        # Backward-compatible: API contract passes List[str]; agent expects List[ApplicationQuestion]
+        normalized: List[Any] = []
+        for q in questions:
+            if isinstance(q, str):
+                normalized.append(
+                    ApplicationQuestion(
+                        question=q,
+                        question_type=answer_agent._classify_question(q),
+                    )
+                )
+            else:
+                normalized.append(q)
         return answer_agent.generate_answers(
-            questions=questions,
+            questions=normalized,
             candidate_profile=candidate_profile,
+            target_role=target_role,
+            target_company=target_company,
+        )
+
+    def optimize_cover_letter(
+        self,
+        cover_letter: str,
+        target_role: str,
+        target_company: str,
+    ) -> Dict[str, Any]:
+        """Provide optimization suggestions for a cover letter (delegates to ApplicationAgent)."""
+        return self.application_agent.optimize_cover_letter(
+            cover_letter=cover_letter,
             target_role=target_role,
             target_company=target_company,
         )
@@ -220,7 +246,7 @@ class ApplicationService:
             job_id=job_id,
             resume_id=primary_resume.resume_id if primary_resume else None,
             cover_letter=cover_letter,
-            status="submitted",
+            status=ApplicationStatus.SUBMITTED,
             applied_date=date.today(),
             application_answers=answers or {},
         )
@@ -256,7 +282,11 @@ class ApplicationService:
         if not app:
             return None
 
-        app.status = status
+        try:
+            status_enum = ApplicationStatus(status)
+        except ValueError:
+            raise ValueError(f"Invalid status: {status}")
+        app.status = status_enum
         if notes:
             app.notes = notes
         if status == "interview_scheduled":
@@ -272,7 +302,7 @@ class ApplicationService:
         if not app:
             return False
 
-        app.status = "withdrawn"
+        app.status = ApplicationStatus.WITHDRAWN
         self.db.commit()
         return True
 
@@ -289,7 +319,7 @@ class ApplicationService:
         }
 
         for app in apps:
-            status = app.status
+            status = app.status.value if hasattr(app.status, "value") else str(app.status)
             stats["by_status"][status] = stats["by_status"].get(status, 0) + 1
 
         if stats["total"] > 0:
@@ -336,3 +366,38 @@ class ApplicationService:
             "notice_period": "2 weeks",
             "summary": profile.bio if profile else "",
         }
+
+    def get_application_insights(self, user_id: int) -> Dict[str, Any]:
+        """Get application insights and analytics for user."""
+        stats = self.get_application_stats(user_id)
+        apps = self.get_user_applications(user_id)
+
+        timeline = []
+        for app in apps:
+            timeline.append({
+                "id": app.id,
+                "status": app.status.value if hasattr(app.status, "value") else str(app.status),
+                "applied_date": app.applied_date.isoformat() if app.applied_date else None,
+                "interview_date": app.interview_date.isoformat() if app.interview_date else None,
+            })
+
+        return {
+            **stats,
+            "timeline": timeline,
+            "tips": self._generate_tips(stats),
+        }
+
+    def _generate_tips(self, stats: Dict[str, Any]) -> list:
+        """Generate actionable tips based on application stats."""
+        tips = []
+        total = stats.get("total", 0)
+        if total == 0:
+            tips.append("Start applying to jobs to see insights here.")
+        else:
+            if stats.get("response_rate", 0) < 30:
+                tips.append("Low response rate. Consider tailoring your resume for each application.")
+            if stats.get("interview_rate", 0) < 20:
+                tips.append("Low interview rate. Strengthen your cover letter and qualifications.")
+            if stats.get("offer_rate", 0) < 10 and total > 5:
+                tips.append("Consider negotiating offers and expanding your job search.")
+        return tips

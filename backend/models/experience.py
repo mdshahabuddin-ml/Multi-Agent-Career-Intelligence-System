@@ -1,7 +1,7 @@
 from datetime import date
 
 from sqlalchemy import Date, ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
 
@@ -44,3 +44,5 @@ class Experience(Base):
         Date,
         nullable=True,
     )
+
+    profile: Mapped["Profile"] = relationship("Profile", back_populates="experiences")

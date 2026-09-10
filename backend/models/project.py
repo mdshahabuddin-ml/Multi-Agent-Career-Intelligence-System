@@ -1,5 +1,5 @@
 from sqlalchemy import ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
 
@@ -37,3 +37,5 @@ class Project(Base):
         String(500),
         nullable=True,
     )
+
+    profile: Mapped["Profile"] = relationship("Profile", back_populates="projects")

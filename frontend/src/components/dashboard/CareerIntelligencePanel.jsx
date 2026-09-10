@@ -12,23 +12,28 @@ function CareerIntelligencePanel() {
   const [activeTab, setActiveTab] = useState("trajectory");
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchData() {
       try {
         setLoading(true);
         const [trajectoryData, gapData] = await Promise.all([
-          careerService.getCareerPathOptions("Software Engineer"),
-          careerService.getSkillRecommendations("Senior Software Engineer"),
+          careerService.getPathOptions("Software Engineer", controller.signal),
+          careerService.getSkillRecommendations("Senior Software Engineer", controller.signal),
         ]);
         setTrajectory(trajectoryData);
         setSkillGaps(gapData);
       } catch (err) {
-        setError("Failed to load career intelligence");
+        if (err.name === "CanceledError" || err.name === "AbortError") return;
+        const message = err.response?.data?.detail || err.message || "Failed to load career intelligence";
+        setError(message);
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
+    return () => controller.abort();
   }, []);
 
   if (loading) {

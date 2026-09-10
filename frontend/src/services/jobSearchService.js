@@ -9,8 +9,8 @@ const jobSearchService = {
     |--------------------------------------------------------------------------
     */
 
-    async searchJobs(params = {}) {
-        const response = await api.post("/api/jobs/search", params);
+    async searchJobs(params = {}, signal) {
+        const response = await api.post("/api/jobs/search", params, { signal });
         return response.data;
     },
 
@@ -31,8 +31,8 @@ const jobSearchService = {
     |--------------------------------------------------------------------------
     */
 
-    async getRecommendations(params = {}) {
-        const response = await api.get("/api/jobs/recommendations", { params });
+    async getRecommendations(params = {}, signal) {
+        const response = await api.get("/api/jobs/recommendations", { params, signal });
         return response.data;
     },
 

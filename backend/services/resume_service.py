@@ -143,7 +143,7 @@ class ResumeService:
             resume.sections = profile_data["sections"]
             resume.extracted_skills = [s["name"] for s in profile_data["skills"]]
             resume.extracted_projects = profile_data["projects"]
-            resume.extracted_experience = experience.get("entries", [])
+            resume.extracted_experience = profile_data.get("experience", {}).get("entries", [])
             resume.extracted_education = []  # TODO: extract education
             resume.status = ResumeStatus.PARSED
 
@@ -153,6 +153,22 @@ class ResumeService:
             logger.info(f"Resume parsed successfully: {resume_id}")
             return resume
 
+        except FileNotFoundError as e:
+            resume.status = ResumeStatus.FAILED
+            self.db.commit()
+            logger.error(f"Resume file not found: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Resume file not found",
+            )
+        except OSError as e:
+            resume.status = ResumeStatus.FAILED
+            self.db.commit()
+            logger.error(f"Resume file not found: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Resume file not found",
+            )
         except Exception as e:
             resume.status = ResumeStatus.FAILED
             self.db.commit()
@@ -180,12 +196,29 @@ class ResumeService:
             await self.parse_resume(resume_id)
             self.db.refresh(resume)
 
-        ats_result = await self.ats_agent.analyze_resume(
-            resume.raw_text or "",
-            resume.sections or {},
+        raw_text = resume.raw_text or ""
+        job_description = " ".join(target_keywords or []) or None
+        ats_analysis = self.ats_agent.analyze(
+            resume_text=raw_text,
             target_role=target_role,
-            target_keywords=target_keywords,
+            job_description=job_description,
         )
+
+        ats_result = {
+            "overall_score": ats_analysis.overall_score,
+            "breakdown": {
+                "keyword_match_score": ats_analysis.keyword_match_score,
+                "format_score": ats_analysis.format_score,
+                "section_score": ats_analysis.section_score,
+                "content_score": ats_analysis.content_score,
+                "passed": ats_analysis.passed,
+                "matched_keywords": ats_analysis.matched_keywords,
+                "missing_keywords": ats_analysis.missing_keywords,
+            },
+            "recommendations": ats_analysis.recommendations,
+            "target_role": target_role,
+            "word_count": len(raw_text.split()),
+        }
 
         resume.ats_score = ats_result["overall_score"]
         resume.ats_feedback = ats_result
@@ -206,18 +239,32 @@ class ResumeService:
             await self.parse_resume(resume_id)
             self.db.refresh(resume)
 
-        skills = [
-            {"name": s, "category": "technical", "confidence": 0.8, "source": "resume"}
-            for s in (resume.extracted_skills or [])
-        ]
-
-        review_result = await self.reviewer_agent.review_resume(
-            resume.raw_text or "",
-            resume.sections or {},
-            skills,
-            resume.extracted_projects or [],
-            resume.parsed_data.get("experience", {}) if resume.parsed_data else {},
+        raw_text = resume.raw_text or ""
+        review = self.reviewer_agent.review(
+            resume_text=raw_text,
         )
+        section_reviews = review.section_reviews or {}
+
+        def _section(name: str) -> dict:
+            section = section_reviews.get(name)
+            return section.to_dict() if section is not None else {}
+
+        review_result = {
+            "content": {
+                "overall_feedback": review.overall_feedback,
+                "strengths": review.strengths,
+                "top_priorities": review.top_priorities,
+            },
+            "experience": _section("experience"),
+            "skills": _section("skills"),
+            "projects": _section("projects"),
+            "overall": {
+                "overall_score": review.overall_score,
+                "grade": review.grade,
+                "improvement_plan": review.improvement_plan,
+            },
+            "word_count": len(raw_text.split()),
+        }
 
         return review_result
 

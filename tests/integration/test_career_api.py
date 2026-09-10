@@ -11,7 +11,7 @@ class TestCareerAPI:
     def test_assess_career(self, client: TestClient, auth_headers, test_profile, test_skills, test_projects, test_experience):
         """Test comprehensive career assessment."""
         response = client.post(
-            "/career/assess",
+            "/api/career/assess",
             json={
                 "current_role": "Software Engineer",
                 "years_experience": 5,
@@ -44,7 +44,7 @@ class TestCareerAPI:
     def test_create_career_goal(self, client: TestClient, auth_headers):
         """Test creating a career goal."""
         response = client.post(
-            "/career/goals",
+            "/api/career/goals",
             json={
                 "title": "Become Staff Engineer",
                 "description": "Reach staff engineer level within 2 years",
@@ -73,7 +73,7 @@ class TestCareerAPI:
             title="Become Staff Engineer",
             description="Reach staff level",
             target_completion_date=date(2026, 12, 31),
-            status="active",
+            status="IN_PROGRESS",
             progress_percentage=25.0,
             milestones=[{"title": "Learn System Design", "completed": False}],
             skill_gaps=["System Design", "Architecture"],
@@ -81,7 +81,7 @@ class TestCareerAPI:
         db_session.add(goal)
         db_session.commit()
 
-        response = client.get("/career/goals", headers=auth_headers)
+        response = client.get("/api/career/goals", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -98,7 +98,7 @@ class TestCareerAPI:
             title="Become Staff Engineer",
             description="Reach staff level",
             target_completion_date=date(2026, 12, 31),
-            status="active",
+            status="IN_PROGRESS",
             progress_percentage=0.0,
             milestones=[
                 {"title": "Learn System Design", "completed": False},
@@ -111,7 +111,7 @@ class TestCareerAPI:
         db_session.refresh(goal)
 
         response = client.post(
-            f"/career/goals/{goal.id}/progress",
+            f"/api/career/goals/{goal.id}/progress",
             json={"completed_milestones": ["Learn System Design"]},
             headers=auth_headers,
         )
@@ -123,7 +123,7 @@ class TestCareerAPI:
     def test_job_search_strategy(self, client: TestClient, auth_headers):
         """Test getting personalized job search strategy."""
         response = client.get(
-            "/career/job-search-strategy",
+            "/api/career/job-search-strategy",
             params={"target_role": "Senior Software Engineer"},
             headers=auth_headers,
         )
@@ -141,7 +141,7 @@ class TestCareerAPI:
     def test_skill_recommendations(self, client: TestClient, auth_headers):
         """Test getting skill recommendations for target role."""
         response = client.get(
-            "/career/skill-recommendations",
+            "/api/career/skill-recommendations",
             params={"target_role": "Machine Learning Engineer"},
             headers=auth_headers,
         )
@@ -156,7 +156,7 @@ class TestCareerAPI:
     def test_career_path_options(self, client: TestClient, auth_headers):
         """Test getting career path options."""
         response = client.get(
-            "/career/path-options",
+            "/api/career/path-options",
             params={"current_role": "Software Engineer"},
             headers=auth_headers,
         )
@@ -170,7 +170,7 @@ class TestCareerAPI:
     def test_learning_resources(self, client: TestClient, auth_headers):
         """Test getting learning resources for a skill."""
         response = client.get(
-            "/career/learning-resources",
+            "/api/career/learning-resources",
             params={"skill": "Kubernetes", "difficulty": "intermediate", "budget": 200},
             headers=auth_headers,
         )
@@ -184,7 +184,7 @@ class TestCareerAPI:
     def test_create_learning_plan(self, client: TestClient, auth_headers):
         """Test creating a learning plan."""
         response = client.post(
-            "/career/learning-plan",
+            "/api/career/learning-plan",
             json={
                 "target_role": "Senior Software Engineer",
                 "target_skills": ["System Design", "Kubernetes", "Architecture"],
@@ -206,7 +206,7 @@ class TestCareerAPI:
 
     def test_career_insights(self, client: TestClient, auth_headers, test_profile, test_skills):
         """Test getting career insights and analytics."""
-        response = client.get("/career/insights", headers=auth_headers)
+        response = client.get("/api/career/insights", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()

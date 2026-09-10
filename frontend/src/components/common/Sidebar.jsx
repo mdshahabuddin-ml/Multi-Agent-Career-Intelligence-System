@@ -49,6 +49,34 @@ function Sidebar() {
       label: "Applications",
       path: "/applications",
     },
+    {
+      label: "Hermes Agent",
+      path: "/hermes",
+    },
+    {
+      label: "Automations",
+      path: "/automations",
+    },
+    {
+      label: "Agent Memory",
+      path: "/agent-memory",
+    },
+    {
+      label: "Agent Skills",
+      path: "/agent-skills",
+    },
+    {
+      label: "Content",
+      path: "/content",
+    },
+    {
+      label: "Social Media",
+      path: "/social",
+    },
+    {
+      label: "Content Analytics",
+      path: "/content-analytics",
+    },
   ];
 
 

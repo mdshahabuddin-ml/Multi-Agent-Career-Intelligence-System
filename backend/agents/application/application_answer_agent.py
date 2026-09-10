@@ -49,6 +49,18 @@ class AnswerDraft:
     confidence: float  # 0-100
     suggestions: List[str] = field(default_factory=list)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "question": self.question,
+            "question_type": self.question_type.value if hasattr(self.question_type, "value") else str(self.question_type),
+            "answer": self.answer,
+            "strategy": self.strategy.value if hasattr(self.strategy, "value") else str(self.strategy),
+            "word_count": self.word_count,
+            "key_points": self.key_points,
+            "confidence": self.confidence,
+            "suggestions": self.suggestions,
+        }
+
 
 @dataclass
 class ApplicationAnswersResult:
@@ -58,6 +70,15 @@ class ApplicationAnswersResult:
     total_word_count: int
     missing_required: List[str]
     review_notes: List[str]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "answers": [a.to_dict() for a in self.answers],
+            "overall_confidence": self.overall_confidence,
+            "total_word_count": self.total_word_count,
+            "missing_required": self.missing_required,
+            "review_notes": self.review_notes,
+        }
 
 
 class ApplicationAnswerAgent:

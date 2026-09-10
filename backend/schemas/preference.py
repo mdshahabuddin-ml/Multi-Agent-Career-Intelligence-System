@@ -137,6 +137,36 @@ class UserPreferenceResponse(BaseModel):
     class Config:
         from_attributes = True
 
+    @classmethod
+    def from_entity(cls, pref) -> "UserPreferenceResponse":
+        """Build a response from the flat UserPreference ORM row.
+
+        Mirrors PersonalizationService._update_preference_fields (nested
+        schema keys map 1:1 onto flat columns). Missing/NULL values fall
+        back to each section's own defaults.
+        """
+        def section(model, obj):
+            data = {}
+            for key in model.model_fields:
+                value = getattr(obj, key, None)
+                if value is None:
+                    continue
+                data[key] = value.value if isinstance(value, Enum) else value
+            return model(**data)
+
+        return cls(
+            id=pref.id,
+            user_id=pref.user_id,
+            job_preferences=section(JobPreferencesBase, pref),
+            notification_preferences=section(NotificationPreferencesBase, pref),
+            content_ui_preferences=section(ContentUIPreferencesBase, pref),
+            privacy_preferences=section(PrivacyPreferencesBase, pref),
+            learning_preferences=section(LearningPreferencesBase, pref),
+            recommendation_weights=section(RecommendationWeightsBase, pref),
+            created_at=pref.created_at,
+            updated_at=pref.updated_at,
+        )
+
 
 class UserBehaviorLogCreate(BaseModel):
     event_type: str

@@ -308,6 +308,7 @@ class SkillGapAgent:
             "google cloud platform": ["gcp", "google cloud"],
             "microsoft azure": ["azure"],
             "postgresql": ["postgres", "psql"],
+            "sql": ["postgresql", "postgres", "mysql", "sqlite"],
             "amazon dynamodb": ["dynamodb"],
             "amazon s3": ["s3"],
             "elastic search": ["elasticsearch", "es"],

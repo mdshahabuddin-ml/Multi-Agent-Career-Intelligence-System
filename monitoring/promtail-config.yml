@@ -1,0 +1,45 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: backend-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: backend
+          service: careerintel-backend
+          __path__: /app/logs/*.log
+
+  - job_name: celery-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: celery
+          service: careerintel-celery
+          __path__: /app/logs/celery*.log
+
+  - job_name: nginx-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          service: careerintel-frontend
+          __path__: /var/log/nginx/*.log
+
+  - job_name: system-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          __path__: /var/log/careerintel/*.log

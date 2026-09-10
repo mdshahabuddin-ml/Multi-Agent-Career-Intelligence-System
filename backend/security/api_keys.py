@@ -12,6 +12,7 @@ from fastapi import Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.models import User
+from backend.models.api_key import ApiKey as ApiKeyRecord
 from backend.database import get_db
 from backend.security.config import get_security_config
 
@@ -96,10 +97,8 @@ class APIKeyManager:
         if expires_in_days:
             expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
 
-        # Create API key record
-        # In production, this would be a database model
-        # For now, we'll store in a simple format
-        api_key = APIKey(
+        # Persist hashed-only record (never store raw_key)
+        record = ApiKeyRecord(
             id=secrets.token_urlsafe(16),
             user_id=user_id,
             name=name,
@@ -108,45 +107,86 @@ class APIKeyManager:
             scopes=scopes,
             created_at=datetime.utcnow(),
             expires_at=expires_at,
-            metadata=metadata or {},
+            key_metadata=metadata or {},
         )
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+        return record, raw_key
 
-        # Store in database (would use a model)
-        # For now, return the key
-        return api_key, raw_key
-
-    def validate_api_key(self, db: Session, raw_key: str) -> Optional[APIKey]:
+    def validate_api_key(self, db: Session, raw_key: str) -> Optional[ApiKeyRecord]:
         """Validate an API key and return its data."""
         if not raw_key or not raw_key.startswith(self.config.API_KEY_PREFIX):
             return None
 
-        # Extract prefix and key part
-        key_part = raw_key[len(self.config.API_KEY_PREFIX):]
-        hashed_key = self.hash_key(key_part)
+        hashed_key = self.hash_key(raw_key)
+        return (
+            db.query(ApiKeyRecord)
+            .filter(ApiKeyRecord.hashed_key == hashed_key)
+            .first()
+        )
 
-        # In production, query database for matching hash
-        # For now, return None (would implement with APIKey model)
-        return None
-
-    def list_user_keys(self, db: Session, user_id: int) -> List[APIKey]:
-        """List all API keys for a user."""
-        # In production, query database
-        return []
+    def list_user_keys(self, db: Session, user_id: int) -> List[ApiKeyRecord]:
+        """List all active API keys for a user."""
+        return (
+            db.query(ApiKeyRecord)
+            .filter(
+                ApiKeyRecord.user_id == user_id,
+                ApiKeyRecord.is_active == True,  # noqa: E712
+            )
+            .order_by(ApiKeyRecord.created_at.desc())
+            .all()
+        )
 
     def revoke_key(self, db: Session, key_id: str, user_id: int) -> bool:
         """Revoke an API key."""
-        # In production, update database
+        record = (
+            db.query(ApiKeyRecord)
+            .filter(
+                ApiKeyRecord.id == key_id,
+                ApiKeyRecord.user_id == user_id,
+            )
+            .first()
+        )
+        if not record:
+            return False
+        record.is_active = False
+        db.commit()
         return True
 
     def update_key_scopes(self, db: Session, key_id: str, user_id: int, scopes: List[str]) -> bool:
         """Update API key scopes."""
-        # In production, update database
+        record = (
+            db.query(ApiKeyRecord)
+            .filter(
+                ApiKeyRecord.id == key_id,
+                ApiKeyRecord.user_id == user_id,
+            )
+            .first()
+        )
+        if not record:
+            return False
+        record.scopes = scopes
+        db.commit()
         return True
 
-    def rotate_key(self, db: Session, key_id: str, user_id: int) -> tuple[APIKey, str]:
+    def rotate_key(self, db: Session, key_id: str, user_id: int) -> tuple[ApiKeyRecord, str]:
         """Rotate an API key (create new, revoke old)."""
-        # In production, would revoke old and create new
-        return self.create_api_key(db, user_id, "rotated_key")
+        old = (
+            db.query(ApiKeyRecord)
+            .filter(
+                ApiKeyRecord.id == key_id,
+                ApiKeyRecord.user_id == user_id,
+            )
+            .first()
+        )
+        scopes = list(old.scopes) if old and old.scopes else [APIKeyScope.READ.value]
+        name = old.name if old and old.name else "rotated_key"
+        metadata = dict(old.key_metadata) if old and old.key_metadata else {}
+        if old:
+            old.is_active = False
+            db.commit()
+        return self.create_api_key(db, user_id, name, scopes=scopes, metadata=metadata)
 
 
 class APIKeyAuth:

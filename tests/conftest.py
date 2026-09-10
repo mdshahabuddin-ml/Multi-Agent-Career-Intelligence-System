@@ -4,7 +4,7 @@ import asyncio
 import os
 import sys
 from collections.abc import AsyncGenerator, Generator
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -17,6 +17,11 @@ from sqlalchemy.pool import StaticPool
 
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+
+# Enable TESTING mode BEFORE importing app (must be set before app import)
+from backend.security.config import security_config
+security_config.TESTING = True
+security_config.ENABLE_CSRF_PROTECTION = False
 
 from backend.config import settings
 from backend.database import Base, get_db
@@ -35,10 +40,13 @@ from backend.models import (
     Research,
     ResearchStatus,
     ResearchType,
+    ResearchSource,
     Interview,
     LearningPlan,
     Notification,
 )
+from backend.models.research_source import SourceType as ResearchSourceType
+from backend.models.application import ApplicationStatus
 from backend.utils.security import create_access_token, get_password_hash
 
 
@@ -146,23 +154,14 @@ def second_user(db_session: Session) -> User:
 
 @pytest.fixture
 def test_profile(db_session: Session, test_user: User) -> Profile:
-    """Create a test profile."""
+    """Create a test profile (matches current Profile schema)."""
     profile = Profile(
         user_id=test_user.id,
         headline="Senior Software Engineer",
-        summary="Experienced developer with 8+ years in Python, React, AWS",
-        location="San Francisco, CA",
-        phone="+1-555-123-4567",
-        linkedin_url="https://linkedin.com/in/testuser",
-        github_url="https://github.com/testuser",
-        portfolio_url="https://testuser.dev",
-        years_experience=8,
-        current_role="Senior Software Engineer",
         target_role="Staff Software Engineer",
-        desired_salary_min=180000,
-        desired_salary_max=250000,
-        prefers_remote=True,
-        willing_to_relocate=False,
+        location="San Francisco, CA",
+        bio="Experienced developer with 8+ years in Python, React, AWS",
+        years_of_experience=8,
     )
     db_session.add(profile)
     db_session.commit()
@@ -174,14 +173,14 @@ def test_profile(db_session: Session, test_user: User) -> Profile:
 def test_skills(db_session: Session, test_profile: Profile) -> list[Skill]:
     """Create test skills for profile."""
     skills_data = [
-        {"name": "Python", "category": "technical", "proficiency": "expert", "years_experience": 8},
-        {"name": "React", "category": "technical", "proficiency": "advanced", "years_experience": 5},
-        {"name": "AWS", "category": "technical", "proficiency": "advanced", "years_experience": 4},
-        {"name": "PostgreSQL", "category": "technical", "proficiency": "advanced", "years_experience": 6},
-        {"name": "Docker", "category": "technical", "proficiency": "intermediate", "years_experience": 3},
-        {"name": "Kubernetes", "category": "technical", "proficiency": "intermediate", "years_experience": 2},
-        {"name": "System Design", "category": "soft", "proficiency": "advanced", "years_experience": 5},
-        {"name": "Leadership", "category": "soft", "proficiency": "advanced", "years_experience": 3},
+        {"name": "Python", "category": "technical", "proficiency": "expert"},
+        {"name": "React", "category": "technical", "proficiency": "advanced"},
+        {"name": "AWS", "category": "technical", "proficiency": "advanced"},
+        {"name": "PostgreSQL", "category": "technical", "proficiency": "advanced"},
+        {"name": "Docker", "category": "technical", "proficiency": "intermediate"},
+        {"name": "Kubernetes", "category": "technical", "proficiency": "intermediate"},
+        {"name": "System Design", "category": "soft", "proficiency": "advanced"},
+        {"name": "Leadership", "category": "soft", "proficiency": "advanced"},
     ]
     skills = []
     for s in skills_data:
@@ -202,23 +201,15 @@ def test_projects(db_session: Session, test_profile: Profile) -> list[Project]:
             profile_id=test_profile.id,
             name="Microservices Platform",
             description="Built a scalable microservices platform serving 10M+ requests/day",
-            technologies=["Go", "Kubernetes", "gRPC", "PostgreSQL", "Redis"],
-            role="Lead Engineer",
-            start_date=datetime(2022, 1, 1),
-            end_date=datetime(2023, 6, 1),
+            technologies="Go, Kubernetes, gRPC, PostgreSQL, Redis",
             url="https://github.com/testuser/microservices",
-            metrics="Reduced deployment time by 80%, improved latency by 60%",
         ),
         Project(
             profile_id=test_profile.id,
             name="Real-time Collaboration Tool",
             description="Real-time document editing with WebSocket infrastructure",
-            technologies=["Node.js", "WebSockets", "Redis", "React", "TypeScript"],
-            role="Full Stack Developer",
-            start_date=datetime(2020, 6, 1),
-            end_date=datetime(2021, 12, 1),
+            technologies="Node.js, WebSockets, Redis, React, TypeScript",
             url="https://github.com/testuser/realtime-editor",
-            metrics="Supported 50k+ concurrent users, 99.9% uptime",
         ),
     ]
     for p in projects:
@@ -235,25 +226,19 @@ def test_experience(db_session: Session, test_profile: Profile) -> list[Experien
     experiences = [
         Experience(
             profile_id=test_profile.id,
-            title="Senior Software Engineer",
             company="TechCorp",
-            location="San Francisco, CA",
+            role="Senior Software Engineer",
             description="Lead team of 5 engineers building scalable microservices",
-            start_date=datetime(2020, 1, 1),
+            start_date=date(2020, 1, 1),
             end_date=None,
-            is_current=True,
-            technologies=["Go", "Kubernetes", "PostgreSQL", "Redis", "gRPC", "AWS"],
         ),
         Experience(
             profile_id=test_profile.id,
-            title="Software Engineer",
             company="StartupXYZ",
-            location="San Francisco, CA",
+            role="Software Engineer",
             description="Built full-stack web applications using React, Node.js, MongoDB",
-            start_date=datetime(2017, 6, 1),
-            end_date=datetime(2019, 12, 31),
-            is_current=False,
-            technologies=["React", "Node.js", "MongoDB", "Express", "Docker"],
+            start_date=date(2017, 6, 1),
+            end_date=date(2019, 12, 31),
         ),
     ]
     for e in experiences:
@@ -290,19 +275,19 @@ def test_resume(db_session: Session, test_user: User) -> Resume:
 
 
 @pytest.fixture
-def test_company(db_session: Session) -> Company:
+def test_company(db_session: Session, test_user: User) -> Company:
     """Create a test company."""
     company = Company(
         name="Google",
+        normalized_name="google",
         description="Technology company specializing in Internet-related services",
         website="https://google.com",
         headquarters="Mountain View, CA",
-        size="10000+",
+        company_size="10000+",
         industry="Technology",
         founded_year=1998,
-        culture_score=4.5,
-        work_life_balance_score=4.2,
-        compensation_score=4.7,
+        glassdoor_rating=4.5,
+        owner_id=test_user.id,
     )
     db_session.add(company)
     db_session.commit()
@@ -329,7 +314,7 @@ def test_jobs(db_session: Session, test_company: Company) -> list[Job]:
             salary_period="yearly",
             experience_level="senior",
             employment_type="full_time",
-            source="company",
+            source="company_career",
             source_url="https://careers.google.com/jobs/1",
             source_job_id="google_1",
             posted_date=datetime.utcnow() - timedelta(days=2),
@@ -354,7 +339,7 @@ def test_jobs(db_session: Session, test_company: Company) -> list[Job]:
             salary_period="yearly",
             experience_level="staff",
             employment_type="full_time",
-            source="company",
+            source="company_career",
             source_url="https://careers.google.com/jobs/2",
             source_job_id="google_2",
             posted_date=datetime.utcnow() - timedelta(days=5),
@@ -379,9 +364,8 @@ def test_application(db_session: Session, test_user: User, test_jobs: list[Job])
     app = Application(
         user_id=test_user.id,
         job_id=test_jobs[0].id,
-        resume_text="Test resume text",
-        cover_letter="Test cover letter",
-        status="submitted",
+        cover_letter="Dear Hiring Manager, I am interested in this position...",
+        status=ApplicationStatus.SUBMITTED,
         applied_date=datetime.utcnow().date(),
         notes="Applied via referral",
     )
@@ -404,10 +388,6 @@ def test_research(db_session: Session, test_user: User) -> Research:
         max_sources=10,
         timeout_seconds=300,
         status=ResearchStatus.COMPLETED,
-        sources=[
-            {"title": "AI Job Market Report 2024", "url": "https://example.com/report1", "source_type": "job_market"},
-            {"title": "ML Engineer Salary Survey", "url": "https://example.com/salary", "source_type": "web"},
-        ],
         executive_summary="The AI/ML job market continues to grow rapidly...",
         key_findings=["Demand for ML engineers up 40%", "Generative AI skills highly valued"],
         recommendations=["Focus on LLM/GenAI skills", "Build portfolio projects"],
@@ -417,6 +397,15 @@ def test_research(db_session: Session, test_user: User) -> Research:
         completed_at=datetime.utcnow(),
     )
     db_session.add(research)
+    db_session.commit()
+    db_session.refresh(research)
+    for source_data in (
+        {"title": "AI Job Market Report 2024", "url": "https://example.com/report1",
+         "source_type": ResearchSourceType.WEB},
+        {"title": "ML Engineer Salary Survey", "url": "https://example.com/salary",
+         "source_type": ResearchSourceType.WEB},
+    ):
+        db_session.add(ResearchSource(research_id=research.id, **source_data))
     db_session.commit()
     db_session.refresh(research)
     return research

@@ -38,6 +38,16 @@ class ATSIssue:
     suggestion: str
     location: Optional[str] = None  # Section or line reference
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": self.type.value if hasattr(self.type, "value") else str(self.type),
+            "severity": self.severity.value if hasattr(self.severity, "value") else str(self.severity),
+            "title": self.title,
+            "description": self.description,
+            "suggestion": self.suggestion,
+            "location": self.location,
+        }
+
 
 @dataclass
 class ATSAnalysisResult:
@@ -52,6 +62,20 @@ class ATSAnalysisResult:
     missing_keywords: List[str]
     matched_keywords: List[str]
     recommendations: List[str]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "overall_score": self.overall_score,
+            "passed": self.passed,
+            "issues": [i.to_dict() for i in self.issues],
+            "keyword_match_score": self.keyword_match_score,
+            "format_score": self.format_score,
+            "section_score": self.section_score,
+            "content_score": self.content_score,
+            "missing_keywords": self.missing_keywords,
+            "matched_keywords": self.matched_keywords,
+            "recommendations": self.recommendations,
+        }
 
 
 class ATSResumeAgent:

@@ -1,5 +1,5 @@
 from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
 
@@ -32,3 +32,5 @@ class Skill(Base):
         String(50),
         nullable=True,
     )
+
+    profile: Mapped["Profile"] = relationship("Profile", back_populates="skills")

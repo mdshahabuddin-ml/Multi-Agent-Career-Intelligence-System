@@ -1,6 +1,7 @@
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -20,8 +21,18 @@ from backend.schemas.monitoring import (
     NotificationChannelCreate, NotificationChannelUpdate, NotificationChannelResponse,
     NotificationTest,
     IncidentCreate, IncidentUpdate, IncidentResponse,
+    AgentExecutionCreate, AgentExecutionUpdate, AgentExecutionResponse, AgentExecutionQuery,
+    AgentExecutionStatus,
+    ToolExecutionCreate, ToolExecutionUpdate, ToolExecutionResponse, ToolExecutionQuery,
+    ToolExecutionStatus,
 )
-from backend.models.monitoring import StructuredLog
+from backend.models.monitoring import (
+    StructuredLog, AlertRule, Alert, HealthCheck, HealthCheckResult,
+    NotificationChannel, Incident, DashboardPanel, TraceStatus,
+    AlertStatus, AlertSeverity,
+    AgentExecution, AgentExecutionStatus as ModelAgentExecutionStatus,
+    ToolExecution, ToolExecutionStatus as ModelToolExecutionStatus,
+)
 
 router = APIRouter(prefix="/monitoring", tags=["Monitoring"])
 
@@ -726,3 +737,334 @@ async def update_incident(
     if not incident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
     return IncidentResponse.from_orm(incident)
+
+
+# ============= Agent Execution History =============
+
+@router.post("/agent-executions", response_model=AgentExecutionResponse, status_code=status.HTTP_201_CREATED)
+async def create_agent_execution(
+    execution: AgentExecutionCreate,
+    background_tasks: BackgroundTasks,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Create an agent execution record."""
+    exec_data = execution.dict()
+    if current_user:
+        exec_data.setdefault("user_id", current_user.id)
+        exec_data.setdefault("organization_id", current_user.organization_id)
+    exec_model = AgentExecution(**exec_data)
+    monitoring.db.add(exec_model)
+    monitoring.db.commit()
+    monitoring.db.refresh(exec_model)
+    return AgentExecutionResponse.from_orm(exec_model)
+
+
+@router.post("/agent-executions/batch", response_model=dict)
+async def create_agent_executions_batch(
+    executions: List[AgentExecutionCreate],
+    background_tasks: BackgroundTasks,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Create multiple agent execution records in batch."""
+    exec_objects = []
+    for execution in executions:
+        exec_data = execution.dict()
+        if current_user:
+            exec_data.setdefault("user_id", current_user.id)
+            exec_data.setdefault("organization_id", current_user.organization_id)
+        exec_objects.append(AgentExecution(**exec_data))
+    
+    monitoring.db.bulk_save_objects(exec_objects)
+    monitoring.db.commit()
+    return {"status": "accepted", "count": len(executions)}
+
+
+@router.post("/agent-executions/query", response_model=List[AgentExecutionResponse])
+async def query_agent_executions(
+    query: AgentExecutionQuery,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Query agent executions with filters."""
+    q = monitoring.db.query(AgentExecution)
+    
+    if query.agent_name:
+        q = q.filter(AgentExecution.agent_name.ilike(f"%{query.agent_name}%"))
+    if query.agent_type:
+        q = q.filter(AgentExecution.agent_type == query.agent_type)
+    if query.workflow_id:
+        q = q.filter(AgentExecution.workflow_id == query.workflow_id)
+    if query.trace_id:
+        q = q.filter(AgentExecution.trace_id == query.trace_id)
+    if query.status:
+        q = q.filter(AgentExecution.status == query.status)
+    if query.user_id:
+        q = q.filter(AgentExecution.user_id == query.user_id)
+    if query.organization_id:
+        q = q.filter(AgentExecution.organization_id == query.organization_id)
+    if query.start_time:
+        q = q.filter(AgentExecution.started_at >= query.start_time)
+    if query.end_time:
+        q = q.filter(AgentExecution.started_at <= query.end_time)
+    
+    executions = q.order_by(desc(AgentExecution.started_at)).limit(query.limit).all()
+    return [AgentExecutionResponse.from_orm(e) for e in executions]
+
+
+@router.get("/agent-executions/{execution_id}", response_model=AgentExecutionResponse)
+async def get_agent_execution(
+    execution_id: str,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Get agent execution by execution ID."""
+    execution = monitoring.db.query(AgentExecution).filter(AgentExecution.execution_id == execution_id).first()
+    if not execution:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent execution not found")
+    return AgentExecutionResponse.from_orm(execution)
+
+
+@router.patch("/agent-executions/{execution_id}", response_model=AgentExecutionResponse)
+async def update_agent_execution(
+    execution_id: str,
+    updates: AgentExecutionUpdate,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Update an agent execution record."""
+    execution = monitoring.db.query(AgentExecution).filter(AgentExecution.execution_id == execution_id).first()
+    if not execution:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent execution not found")
+    
+    for field, value in updates.dict(exclude_unset=True).items():
+        setattr(execution, field, value)
+    
+    # If status changed to completed/failed and no end time, set it
+    if updates.status in [ModelAgentExecutionStatus.COMPLETED, ModelAgentExecutionStatus.FAILED, ModelAgentExecutionStatus.TIMEOUT, ModelAgentExecutionStatus.CANCELLED]:
+        if not execution.ended_at:
+            execution.ended_at = datetime.utcnow()
+            if execution.started_at:
+                execution.duration_ms = (execution.ended_at - execution.started_at).total_seconds() * 1000
+    
+    monitoring.db.commit()
+    monitoring.db.refresh(execution)
+    return AgentExecutionResponse.from_orm(execution)
+
+
+@router.get("/agent-executions/trace/{trace_id}", response_model=List[AgentExecutionResponse])
+async def get_agent_executions_by_trace(
+    trace_id: str,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Get all agent executions for a trace."""
+    executions = monitoring.db.query(AgentExecution).filter(
+        AgentExecution.trace_id == trace_id
+    ).order_by(AgentExecution.started_at).all()
+    return [AgentExecutionResponse.from_orm(e) for e in executions]
+
+
+@router.get("/agent-executions/workflow/{workflow_id}", response_model=List[AgentExecutionResponse])
+async def get_agent_executions_by_workflow(
+    workflow_id: str,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Get all agent executions for a workflow."""
+    executions = monitoring.db.query(AgentExecution).filter(
+        AgentExecution.workflow_id == workflow_id
+    ).order_by(AgentExecution.started_at).all()
+    return [AgentExecutionResponse.from_orm(e) for e in executions]
+
+
+# ============= Tool Execution History =============
+
+@router.post("/tool-executions", response_model=ToolExecutionResponse, status_code=status.HTTP_201_CREATED)
+async def create_tool_execution(
+    execution: ToolExecutionCreate,
+    background_tasks: BackgroundTasks,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Create a tool execution record."""
+    exec_data = execution.dict()
+    if current_user:
+        exec_data.setdefault("user_id", current_user.id)
+        exec_data.setdefault("organization_id", current_user.organization_id)
+    exec_model = ToolExecution(**exec_data)
+    monitoring.db.add(exec_model)
+    monitoring.db.commit()
+    monitoring.db.refresh(exec_model)
+    return ToolExecutionResponse.from_orm(exec_model)
+
+
+@router.post("/tool-executions/batch", response_model=dict)
+async def create_tool_executions_batch(
+    executions: List[ToolExecutionCreate],
+    background_tasks: BackgroundTasks,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Create multiple tool execution records in batch."""
+    exec_objects = []
+    for execution in executions:
+        exec_data = execution.dict()
+        if current_user:
+            exec_data.setdefault("user_id", current_user.id)
+            exec_data.setdefault("organization_id", current_user.organization_id)
+        exec_objects.append(ToolExecution(**exec_data))
+    
+    monitoring.db.bulk_save_objects(exec_objects)
+    monitoring.db.commit()
+    return {"status": "accepted", "count": len(executions)}
+
+
+@router.post("/tool-executions/query", response_model=List[ToolExecutionResponse])
+async def query_tool_executions(
+    query: ToolExecutionQuery,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Query tool executions with filters."""
+    q = monitoring.db.query(ToolExecution)
+    
+    if query.tool_name:
+        q = q.filter(ToolExecution.tool_name.ilike(f"%{query.tool_name}%"))
+    if query.tool_type:
+        q = q.filter(ToolExecution.tool_type == query.tool_type)
+    if query.trace_id:
+        q = q.filter(ToolExecution.trace_id == query.trace_id)
+    if query.agent_execution_id:
+        q = q.filter(ToolExecution.agent_execution_id == query.agent_execution_id)
+    if query.status:
+        q = q.filter(ToolExecution.status == query.status)
+    if query.user_id:
+        q = q.filter(ToolExecution.user_id == query.user_id)
+    if query.organization_id:
+        q = q.filter(ToolExecution.organization_id == query.organization_id)
+    if query.start_time:
+        q = q.filter(ToolExecution.started_at >= query.start_time)
+    if query.end_time:
+        q = q.filter(ToolExecution.started_at <= query.end_time)
+    
+    executions = q.order_by(desc(ToolExecution.started_at)).limit(query.limit).all()
+    return [ToolExecutionResponse.from_orm(e) for e in executions]
+
+
+@router.get("/tool-executions/{execution_id}", response_model=ToolExecutionResponse)
+async def get_tool_execution(
+    execution_id: str,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Get tool execution by execution ID."""
+    execution = monitoring.db.query(ToolExecution).filter(ToolExecution.execution_id == execution_id).first()
+    if not execution:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tool execution not found")
+    return ToolExecutionResponse.from_orm(execution)
+
+
+@router.patch("/tool-executions/{execution_id}", response_model=ToolExecutionResponse)
+async def update_tool_execution(
+    execution_id: str,
+    updates: ToolExecutionUpdate,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Update a tool execution record."""
+    execution = monitoring.db.query(ToolExecution).filter(ToolExecution.execution_id == execution_id).first()
+    if not execution:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tool execution not found")
+    
+    for field, value in updates.dict(exclude_unset=True).items():
+        setattr(execution, field, value)
+    
+    if updates.status in [ModelToolExecutionStatus.COMPLETED, ModelToolExecutionStatus.FAILED, ModelToolExecutionStatus.TIMEOUT, ModelToolExecutionStatus.RATE_LIMITED]:
+        if not execution.ended_at:
+            execution.ended_at = datetime.utcnow()
+            if execution.started_at:
+                execution.duration_ms = (execution.ended_at - execution.started_at).total_seconds() * 1000
+    
+    monitoring.db.commit()
+    monitoring.db.refresh(execution)
+    return ToolExecutionResponse.from_orm(execution)
+
+
+@router.get("/tool-executions/trace/{trace_id}", response_model=List[ToolExecutionResponse])
+async def get_tool_executions_by_trace(
+    trace_id: str,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Get all tool executions for a trace."""
+    executions = monitoring.db.query(ToolExecution).filter(
+        ToolExecution.trace_id == trace_id
+    ).order_by(ToolExecution.started_at).all()
+    return [ToolExecutionResponse.from_orm(e) for e in executions]
+
+
+@router.get("/tool-executions/agent/{agent_execution_id}", response_model=List[ToolExecutionResponse])
+async def get_tool_executions_by_agent(
+    agent_execution_id: str,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Get all tool executions for an agent execution."""
+    executions = monitoring.db.query(ToolExecution).filter(
+        ToolExecution.agent_execution_id == agent_execution_id
+    ).order_by(ToolExecution.started_at).all()
+    return [ToolExecutionResponse.from_orm(e) for e in executions]
+
+
+# ============= Combined Trace View =============
+
+@router.get("/traces/{trace_id}/full", response_model=Dict[str, Any])
+async def get_full_trace(
+    trace_id: str,
+    current_user = Depends(auth.get_current_active_user),
+    monitoring: MonitoringService = Depends(get_monitoring),
+):
+    """Get complete trace with agent executions and tool executions."""
+    trace = monitoring.get_trace_with_spans(trace_id)
+    if not trace:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trace not found")
+    
+    # Get agent executions
+    agent_execs = monitoring.db.query(AgentExecution).filter(
+        AgentExecution.trace_id == trace_id
+    ).order_by(AgentExecution.started_at).all()
+    
+    # Get tool executions
+    tool_execs = monitoring.db.query(ToolExecution).filter(
+        ToolExecution.trace_id == trace_id
+    ).order_by(ToolExecution.started_at).all()
+    
+    # Calculate totals
+    total_duration_ms = trace.duration_ms or 0
+    total_llm_calls = sum(e.llm_calls for e in agent_execs)
+    total_prompt_tokens = sum(e.prompt_tokens for e in agent_execs)
+    total_completion_tokens = sum(e.completion_tokens for e in agent_execs)
+    total_tokens = sum(e.total_tokens for e in agent_execs)
+    total_estimated_cost = sum(e.estimated_cost_usd or 0 for e in agent_execs)
+    total_estimated_cost += sum(t.estimated_cost_usd or 0 for t in tool_execs)
+    
+    return {
+        "trace": TraceResponse.from_orm(trace),
+        "spans": [SpanResponse.from_orm(s) for s in trace.spans],
+        "agent_executions": [AgentExecutionResponse.from_orm(e) for e in agent_execs],
+        "tool_executions": [ToolExecutionResponse.from_orm(e) for e in tool_execs],
+        "summary": {
+            "total_duration_ms": total_duration_ms,
+            "total_llm_calls": total_llm_calls,
+            "total_prompt_tokens": total_prompt_tokens,
+            "total_completion_tokens": total_completion_tokens,
+            "total_tokens": total_tokens,
+            "total_estimated_cost_usd": round(total_estimated_cost, 6),
+            "agent_count": len(agent_execs),
+            "tool_count": len(tool_execs),
+            "status": trace.status.value,
+            "error_message": trace.error_message,
+        }
+    }

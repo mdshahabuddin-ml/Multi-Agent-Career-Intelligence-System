@@ -100,7 +100,7 @@ class PersonalizationService:
             return None
 
         return {
-            "preferences": UserPreferenceResponse.from_orm(pref).dict(),
+            "preferences": UserPreferenceResponse.from_entity(pref).dict(),
             "exported_at": datetime.utcnow().isoformat(),
             "version": "1.0"
         }
@@ -452,9 +452,10 @@ class PersonalizationService:
                     "reason": f"High demand skill in your field"
                 })
 
-        if preferences and preferences.learning_preferences:
-            if preferences.learning_preferences.preferred_learning_platforms:
-                for platform in preferences.learning_preferences.preferred_learning_platforms:
+        if preferences:
+            learning = UserPreferenceResponse.from_entity(preferences).learning_preferences
+            if learning.preferred_learning_platforms:
+                for platform in learning.preferred_learning_platforms:
                     recommendations.append({
                         "platform": platform,
                         "type": "platform_preference",
@@ -472,15 +473,24 @@ class PersonalizationService:
         profile = self.get_personalization_profile(user_id)
 
         config = {
-            "theme": preferences.content_ui_preferences.theme_mode.value if preferences and preferences.content_ui_preferences else "system",
-            "density": preferences.content_ui_preferences.content_density.value if preferences and preferences.content_ui_preferences else "comfortable",
-            "compact_mode": preferences.content_ui_preferences.compact_mode if preferences and preferences.content_ui_preferences else False,
-            "show_salary_estimates": preferences.content_ui_preferences.show_salary_estimates if preferences and preferences.content_ui_preferences else True,
-            "language": preferences.content_ui_preferences.language if preferences and preferences.content_ui_preferences else "en",
+            "theme": "system",
+            "density": "comfortable",
+            "compact_mode": False,
+            "show_salary_estimates": True,
+            "language": "en",
             "dashboard_layout": self._get_dashboard_layout(profile),
             "default_filters": self._get_default_filters(preferences),
             "recommendation_widgets": self._get_recommendation_widgets(profile),
         }
+        if preferences:
+            ui = UserPreferenceResponse.from_entity(preferences).content_ui_preferences
+            config.update(
+                theme=ui.theme_mode.value,
+                density=ui.content_density.value,
+                compact_mode=ui.compact_mode,
+                show_salary_estimates=ui.show_salary_estimates,
+                language=ui.language,
+            )
 
         return config
 
@@ -503,15 +513,16 @@ class PersonalizationService:
 
     def _get_default_filters(self, preferences: Optional[UserPreference]) -> Dict[str, Any]:
         """Get default search filters from preferences."""
-        if not preferences or not preferences.job_preferences:
+        if not preferences:
             return {}
 
+        job = UserPreferenceResponse.from_entity(preferences).job_preferences
         return {
-            "locations": preferences.job_preferences.preferred_locations,
-            "remote_types": preferences.job_preferences.preferred_remote_types,
-            "min_salary": preferences.job_preferences.min_salary,
-            "job_types": preferences.job_preferences.preferred_job_types,
-            "industries": preferences.job_preferences.preferred_industries,
+            "locations": job.preferred_locations,
+            "remote_types": job.preferred_remote_types,
+            "min_salary": job.min_salary,
+            "job_types": job.preferred_job_types,
+            "industries": job.preferred_industries,
         }
 
     def _get_recommendation_widgets(self, profile: Optional[PersonalizationProfile]) -> List[Dict[str, Any]]:

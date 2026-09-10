@@ -10,19 +10,24 @@ function CareerHealthScore() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchInsights() {
       try {
         setLoading(true);
-        const data = await careerService.getInsights();
+        const data = await careerService.getInsights(controller.signal);
         setInsights(data);
       } catch (err) {
-        setError("Failed to load career insights");
+        if (err.name === "CanceledError" || err.name === "AbortError") return;
+        const message = err.response?.data?.detail || err.message || "Failed to load career insights";
+        setError(message);
       } finally {
         setLoading(false);
       }
     }
 
     fetchInsights();
+    return () => controller.abort();
   }, []);
 
   if (loading) {

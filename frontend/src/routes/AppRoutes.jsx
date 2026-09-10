@@ -17,6 +17,15 @@ import ResearchReport from "../pages/ResearchReport";
 import Career from "../pages/Career";
 import Interview from "../pages/Interview";
 import Applications from "../pages/Applications";
+import ContentCalendar from "../pages/ContentCalendar";
+import AnalyticsDashboard from "../pages/AnalyticsDashboard";
+import Hermes from "../pages/Hermes";
+import Automations from "../pages/Automations";
+import AgentMemoryPage from "../pages/AgentMemory";
+import AgentSkillsPage from "../pages/AgentSkills";
+import Content from "../pages/Content";
+import SocialMedia from "../pages/SocialMedia";
+import ContentAnalytics from "../pages/ContentAnalytics";
 
 import AppLayout from "../components/common/AppLayout";
 
@@ -105,6 +114,51 @@ function AppRoutes() {
           <Route
             path="/applications"
             element={<Applications />}
+          />
+
+          <Route
+            path="/content-calendar"
+            element={<ContentCalendar />}
+          />
+
+          <Route
+            path="/analytics"
+            element={<AnalyticsDashboard />}
+          />
+
+          <Route
+            path="/hermes"
+            element={<Hermes />}
+          />
+
+          <Route
+            path="/automations"
+            element={<Automations />}
+          />
+
+          <Route
+            path="/agent-memory"
+            element={<AgentMemoryPage />}
+          />
+
+          <Route
+            path="/agent-skills"
+            element={<AgentSkillsPage />}
+          />
+
+          <Route
+            path="/content"
+            element={<Content />}
+          />
+
+          <Route
+            path="/social"
+            element={<SocialMedia />}
+          />
+
+          <Route
+            path="/content-analytics"
+            element={<ContentAnalytics />}
           />
 
         </Route>

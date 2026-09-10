@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from backend.config import settings
 from backend.database import get_db
 from backend.dependencies import get_current_active_user
 from backend.models import User
+from backend.models.organization import Organization, OrganizationMember, OrganizationPlan, OrganizationStatus
 from backend.schemas.user import Token, UserCreate, UserLogin, UserResponse, UserWithToken
 from backend.utils.security import create_access_token, get_password_hash, verify_password
 
@@ -26,6 +28,28 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         full_name=user_in.full_name,
     )
     db.add(user)
+    db.flush()
+
+    slug = f"personal-{user.id}"
+    org = Organization(
+        name=user.full_name or user.email.split("@")[0],
+        slug=slug,
+        description="Personal organization",
+        status=OrganizationStatus.TRIAL,
+        plan=OrganizationPlan.FREE,
+    )
+    db.add(org)
+    db.flush()
+
+    member = OrganizationMember(
+        organization_id=org.id,
+        user_id=user.id,
+        role="owner",
+        joined_at=datetime.utcnow(),
+    )
+    db.add(member)
+
+    user.organization_id = org.id
     db.commit()
     db.refresh(user)
     access_token = create_access_token(data={"sub": user.id})

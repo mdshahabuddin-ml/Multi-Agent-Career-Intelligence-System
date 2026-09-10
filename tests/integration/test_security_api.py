@@ -9,7 +9,7 @@ class TestSecurityAPI:
 
     def test_get_available_scopes(self, client: TestClient, auth_headers):
         """Test getting available API key scopes."""
-        response = client.get("/security/scopes", headers=auth_headers)
+        response = client.get("/api/security/scopes", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -26,7 +26,7 @@ class TestSecurityAPI:
     def test_create_api_key(self, client: TestClient, auth_headers):
         """Test creating an API key."""
         response = client.post(
-            "/security/api-keys",
+            "/api/security/api-keys",
             json={
                 "name": "Test API Key",
                 "scopes": ["read", "research"],
@@ -46,7 +46,7 @@ class TestSecurityAPI:
     def test_create_api_key_invalid_scope(self, client: TestClient, auth_headers):
         """Test creating API key with invalid scope."""
         response = client.post(
-            "/security/api-keys",
+            "/api/security/api-keys",
             json={
                 "name": "Test Key",
                 "scopes": ["invalid_scope"],
@@ -61,12 +61,12 @@ class TestSecurityAPI:
         """Test listing user's API keys."""
         # First create a key
         client.post(
-            "/security/api-keys",
+            "/api/security/api-keys",
             json={"name": "List Test Key", "scopes": ["read"]},
             headers=auth_headers,
         )
 
-        response = client.get("/security/api-keys", headers=auth_headers)
+        response = client.get("/api/security/api-keys", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -79,13 +79,13 @@ class TestSecurityAPI:
         """Test getting a specific API key."""
         # Create a key first
         create_response = client.post(
-            "/security/api-keys",
+            "/api/security/api-keys",
             json={"name": "Get Test Key", "scopes": ["read"]},
             headers=auth_headers,
         )
         key_id = create_response.json()["api_key"]["id"]
 
-        response = client.get(f"/security/api-keys/{key_id}", headers=auth_headers)
+        response = client.get(f"/api/security/api-keys/{key_id}", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -96,14 +96,14 @@ class TestSecurityAPI:
     def test_update_api_key(self, client: TestClient, auth_headers):
         """Test updating an API key."""
         create_response = client.post(
-            "/security/api-keys",
+            "/api/security/api-keys",
             json={"name": "Original Name", "scopes": ["read"]},
             headers=auth_headers,
         )
         key_id = create_response.json()["api_key"]["id"]
 
         response = client.patch(
-            f"/security/api-keys/{key_id}",
+            f"/api/security/api-keys/{key_id}",
             json={
                 "name": "Updated Name",
                 "scopes": ["read", "write"],
@@ -119,30 +119,30 @@ class TestSecurityAPI:
     def test_revoke_api_key(self, client: TestClient, auth_headers):
         """Test revoking an API key."""
         create_response = client.post(
-            "/security/api-keys",
+            "/api/security/api-keys",
             json={"name": "To Revoke", "scopes": ["read"]},
             headers=auth_headers,
         )
         key_id = create_response.json()["api_key"]["id"]
 
-        response = client.delete(f"/security/api-keys/{key_id}", headers=auth_headers)
+        response = client.delete(f"/api/security/api-keys/{key_id}", headers=auth_headers)
 
         assert response.status_code == 204
 
         # Verify it's revoked
-        response = client.get(f"/security/api-keys/{key_id}", headers=auth_headers)
+        response = client.get(f"/api/security/api-keys/{key_id}", headers=auth_headers)
         assert response.status_code == 404
 
     def test_rotate_api_key(self, client: TestClient, auth_headers):
         """Test rotating an API key."""
         create_response = client.post(
-            "/security/api-keys",
+            "/api/security/api-keys",
             json={"name": "To Rotate", "scopes": ["read"]},
             headers=auth_headers,
         )
         key_id = create_response.json()["api_key"]["id"]
 
-        response = client.post(f"/security/api-keys/{key_id}/rotate", headers=auth_headers)
+        response = client.post(f"/api/security/api-keys/{key_id}/rotate", headers=auth_headers)
 
         assert response.status_code == 201
         result = response.json()
@@ -153,14 +153,25 @@ class TestSecurityAPI:
         assert result["api_key"]["id"] != key_id
 
     def test_get_security_status(self, client: TestClient, auth_headers):
-        """Test getting security configuration status (requires admin scope)."""
-        response = client.get("/security/status", headers=auth_headers)
-        # Might be 403 if user doesn't have admin scope
-        assert response.status_code in [200, 403]
+        """Test getting security configuration status (requires admin API-key scope)."""
+        # JWT alone must not satisfy admin API-key scope
+        response = client.get("/api/security/status", headers=auth_headers)
+        assert response.status_code == 401
+
+        # Provision admin API key via JWT, then use it
+        create_response = client.post(
+            "/api/security/api-keys",
+            json={"name": "Admin Status Key", "scopes": ["admin"]},
+            headers=auth_headers,
+        )
+        assert create_response.status_code == 201
+        raw_key = create_response.json()["raw_key"]
+        response = client.get("/api/security/status", headers={"X-API-Key": raw_key})
+        assert response.status_code == 200
 
     def test_get_csrf_token(self, client: TestClient, auth_headers):
         """Test getting CSRF token."""
-        response = client.get("/security/csrf-token", headers=auth_headers)
+        response = client.get("/api/security/csrf-token", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -213,7 +224,7 @@ class TestSecurityMiddleware:
         """Test request size limit enforcement."""
         large_data = "x" * (11 * 1024 * 1024)  # 11MB > 10MB limit
         response = client.post(
-            "/auth/register",
+            "/api/auth/register",
             content=large_data,
             headers={"Content-Type": "application/json"},
         )
@@ -223,20 +234,21 @@ class TestSecurityMiddleware:
     def test_json_depth_limit(self, client: TestClient):
         """Test JSON nesting depth limit."""
         # Create deeply nested JSON
-        deep_json = {"a": {"b": {"c": {"d": {"e": {"f": {"g": {"h": {"i": {"j": {"k": "value"}}}}}}}}}}
-        response = client.post("/auth/register", json=deep_json)
+        deep_json = {"a": {"b": {"c": {"d": {"e": {"f": {"g": {"h": {"i": {"j": {"k": "value"}}}}}}}}}}}
+        response = client.post("/api/auth/register", json=deep_json)
         
         # Should either accept or reject based on depth limit
         assert response.status_code in [200, 400, 422]
 
-    def test_csrf_protection(self, client: TestClient, auth_headers):
+    def test_csrf_protection(self, client: TestClient, auth_headers, test_jobs):
         """Test CSRF protection on state-changing endpoints."""
         # Try POST without CSRF token (should fail for non-exempt endpoints)
         # Note: This depends on CSRF middleware configuration
+        job = test_jobs[0]
         response = client.post(
-            "/applications/",
+            "/api/applications/",
             json={
-                "job_id": 1,
+                "job_id": job.id,
                 "resume_text": "Test",
             },
             headers=auth_headers,

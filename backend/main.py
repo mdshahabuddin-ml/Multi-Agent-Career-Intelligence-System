@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
-from backend.api import auth, health, resume, jobs, research, career, applications, evaluation, security, data_pipeline, personalization, organization, monitoring, admin, rate_limits
+from backend.api import auth, health, resume, jobs, research, career, applications, interview, evaluation, security, data_pipeline, personalization, organization, monitoring, admin, rate_limits, content_calendar, notifications, profile, dashboard
+from backend.api import hermes, memory, skills, automation, gateway, content, social
+from backend.api import career_content, content_analytics, hermes_optimization
 from backend.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -69,20 +71,35 @@ app.add_middleware(
 # ==========================================
 # Include API Routers
 # ==========================================
-app.include_router(auth.router)
-app.include_router(health.router)
-app.include_router(resume.router)
-app.include_router(jobs.router)
-app.include_router(research.router)
-app.include_router(career.router)
-app.include_router(applications.router)
-app.include_router(evaluation.router)
-app.include_router(security.router)
-app.include_router(data_pipeline.router)
-app.include_router(personalization.router)
-app.include_router(organization.router)
-app.include_router(monitoring.router)
-app.include_router(admin.router)
+app.include_router(auth.router, prefix="/api")
+app.include_router(profile.router, prefix="/api")
+app.include_router(health.router, prefix="/api")
+app.include_router(resume.router, prefix="/api")
+app.include_router(jobs.router, prefix="/api")
+app.include_router(research.router, prefix="/api")
+app.include_router(career.router, prefix="/api")
+app.include_router(applications.router, prefix="/api")
+app.include_router(interview.router, prefix="/api")
+app.include_router(evaluation.router, prefix="/api")
+app.include_router(security.router, prefix="/api")
+app.include_router(data_pipeline.router, prefix="/api")
+app.include_router(personalization.router, prefix="/api")
+app.include_router(organization.router, prefix="/api")
+app.include_router(monitoring.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
+app.include_router(content_calendar.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
+app.include_router(hermes.router, prefix="/api")
+app.include_router(memory.router, prefix="/api")
+app.include_router(skills.router, prefix="/api")
+app.include_router(automation.router, prefix="/api")
+app.include_router(gateway.router, prefix="/api")
+app.include_router(content.router, prefix="/api")
+app.include_router(social.router, prefix="/api")
+app.include_router(career_content.router, prefix="/api")
+app.include_router(content_analytics.router, prefix="/api")
+app.include_router(hermes_optimization.router, prefix="/api")
 
 
 # ==========================================

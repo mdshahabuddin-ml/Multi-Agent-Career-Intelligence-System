@@ -34,6 +34,17 @@ class ReviewIssue:
     section: Optional[str] = None
     examples: List[str] = field(default_factory=list)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "category": self.category.value if hasattr(self.category, "value") else str(self.category),
+            "severity": self.severity.value if hasattr(self.severity, "value") else str(self.severity),
+            "title": self.title,
+            "description": self.description,
+            "suggestion": self.suggestion,
+            "section": self.section,
+            "examples": self.examples,
+        }
+
 
 @dataclass
 class SectionReview:
@@ -43,6 +54,15 @@ class SectionReview:
     issues: List[ReviewIssue]
     strengths: List[str]
     suggestions: List[str]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "section_name": self.section_name,
+            "score": self.score,
+            "issues": [i.to_dict() for i in self.issues],
+            "strengths": self.strengths,
+            "suggestions": self.suggestions,
+        }
 
 
 @dataclass
@@ -55,6 +75,17 @@ class ResumeReviewResult:
     strengths: List[str]
     overall_feedback: str
     improvement_plan: List[Dict[str, Any]]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "overall_score": self.overall_score,
+            "grade": self.grade,
+            "section_reviews": {k: v.to_dict() for k, v in self.section_reviews.items()},
+            "top_priorities": self.top_priorities,
+            "strengths": self.strengths,
+            "overall_feedback": self.overall_feedback,
+            "improvement_plan": self.improvement_plan,
+        }
 
 
 class ResumeReviewerAgent:

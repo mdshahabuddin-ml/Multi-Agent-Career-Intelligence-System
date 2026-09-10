@@ -34,6 +34,18 @@ class CareerAdvice:
     timeline: str
     confidence: float
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "focus": self.focus.value,
+            "title": self.title,
+            "description": self.description,
+            "priority": self.priority,
+            "actionable_steps": self.actionable_steps,
+            "resources": self.resources,
+            "timeline": self.timeline,
+            "confidence": self.confidence,
+        }
+
 
 @dataclass
 class CareerAssessment:
@@ -67,6 +79,7 @@ class CareerGoal:
     milestones: List[Dict[str, Any]]
     is_active: bool = True
     progress: float = 0.0
+    created_at: datetime = field(default_factory=datetime.utcnow)
 
 
 class CareerAdvisor:

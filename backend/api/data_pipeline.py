@@ -32,7 +32,7 @@ from backend.data_pipeline import (
 )
 from backend.data_pipeline.sources.source_registry import DataSource
 
-router = APIRouter(prefix="/api/data-pipeline", tags=["Data Pipeline"])
+router = APIRouter(prefix="/data-pipeline", tags=["Data Pipeline"])
 
 
 def get_source_registry(db: Session = Depends(get_db)) -> SourceRegistry:

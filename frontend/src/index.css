@@ -151,6 +151,20 @@ a {
     gap: 20px;
 }
 
+.dashboard-main {
+    min-width: 0;
+}
+
+.dashboard-sidebar {
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 
 /* =====================================
    Cards

@@ -85,11 +85,13 @@ async def list_benchmark_categories(
     current_user: User = Depends(get_current_active_user),
 ):
     """List available benchmark categories."""
-    from backend.evaluation.benchmarks import ALL_BENCHMARKS, BENCHMARK_CATEGORIES
+    from backend.evaluation.benchmarks import ALL_BENCHMARKS
 
     return {
         "categories": list(ALL_BENCHMARKS.keys()),
-        "evaluators_per_category": BENCHMARK_CATEGORIES,
+        "evaluators_per_category": {
+            category: len(cases) for category, cases in ALL_BENCHMARKS.items()
+        },
     }
 
 
@@ -152,11 +154,17 @@ async def run_evaluation(
     for benchmark in benchmarks:
         suite.add_test_case(benchmark)
 
+    # Get unique levels from benchmarks
+    levels = set(b.level.value for b in benchmarks)
+
     for eval_name in evaluator_names:
         evaluator_class = EVALUATORS.get(eval_name)
         if evaluator_class:
             evaluator = evaluator_class(request.config.get(eval_name, {}) if request.config else {})
-            suite.add_evaluator(evaluator, eval_name)
+            # Register evaluator for each level in this category
+            # (EvaluationSuite resolves evaluators by test-case level)
+            for level in levels:
+                suite.add_evaluator(evaluator, level)
 
     # Get actual outputs
     if request.mock_outputs:
@@ -259,7 +267,9 @@ async def run_custom_evaluation(
         evaluator_class = EVALUATORS.get(eval_name)
         if evaluator_class:
             evaluator = evaluator_class(config.get(eval_name, {}) if config else {})
-            suite.add_evaluator(evaluator, eval_name)
+            # Register evaluator for each level present (suite resolves by level)
+            for level in {b.level.value for b in benchmarks}:
+                suite.add_evaluator(evaluator, level)
 
     # Run evaluation
     results = suite.run(actual_outputs)

@@ -7,6 +7,10 @@ from datetime import datetime, timedelta
 from backend.database import get_db
 from backend.api import auth
 from backend.services.billing_service import BillingService, OrganizationService
+from backend.models import (
+    Organization, User, OrganizationPlan, OrganizationStatus,
+    Subscription, Invoice, BillingInterval, FeatureFlag,
+)
 from backend.schemas.organization import (
     OrganizationResponse, OrganizationUsageResponse,
     SubscriptionResponse, InvoiceResponse, FeatureFlagResponse,

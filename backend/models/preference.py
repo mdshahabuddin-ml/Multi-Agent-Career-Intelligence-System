@@ -1,11 +1,14 @@
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional, List
+from typing import TYPE_CHECKING, Optional, List
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
+
+if TYPE_CHECKING:
+    from backend.models.user import User
 
 
 class NotificationChannel(str, PyEnum):
@@ -14,6 +17,8 @@ class NotificationChannel(str, PyEnum):
     IN_APP = "in_app"
     SMS = "sms"
     WEBHOOK = "webhook"
+    TELEGRAM = "telegram"
+    DISCORD = "discord"
 
 
 class NotificationFrequency(str, PyEnum):
@@ -76,6 +81,17 @@ class UserPreference(Base):
     quiet_hours_start: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)  # HH:MM
     quiet_hours_end: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)
     timezone: Mapped[str] = mapped_column(String(50), default="UTC", nullable=False)
+
+    # Telegram Integration
+    telegram_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    telegram_chat_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    telegram_bot_token: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    telegram_notification_types: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True)
+
+    # Discord Integration
+    discord_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    discord_webhook_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    discord_notification_types: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True)
 
     # Content & UI Preferences
     theme_mode: Mapped[ThemeMode] = mapped_column(default=ThemeMode.SYSTEM, nullable=False)

@@ -471,3 +471,128 @@ class Incident(Base):
     organization: Mapped[Optional["Organization"]] = relationship("Organization")
     commander: Mapped[Optional["User"]] = relationship("User", foreign_keys=[commander_id])
     scribe: Mapped[Optional["User"]] = relationship("User", foreign_keys=[scribe_id])
+
+
+# ============= Agent Execution History =============
+
+class AgentExecutionStatus(str, PyEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
+
+
+class AgentExecution(Base):
+    """Track agent execution history for observability."""
+    __tablename__ = "agent_executions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    execution_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    trace_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+
+    # Agent info
+    agent_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    agent_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)  # supervisor, planner, researcher, verifier, etc.
+    agent_version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Execution context
+    parent_execution_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    workflow_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    workflow_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phase: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # Input/Output
+    input_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    output_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Status & Timing
+    status: Mapped[AgentExecutionStatus] = mapped_column(Enum(AgentExecutionStatus), default=AgentExecutionStatus.PENDING, nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    duration_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # Resource usage
+    cpu_time_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    memory_mb: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # LLM/Cost tracking
+    llm_calls: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    estimated_cost_usd: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # Organization context
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    organization_id: Mapped[Optional[int]] = mapped_column(ForeignKey("organizations.id"), nullable=True, index=True)
+
+    # Metadata
+    exec_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    tags: Mapped[Optional[Dict[str, str]]] = mapped_column(JSON, nullable=True)
+
+    __table_args__ = (
+        Index('ix_agent_exec_trace', 'trace_id'),
+        Index('ix_agent_exec_agent_status', 'agent_name', 'status'),
+        Index('ix_agent_exec_org_time', 'organization_id', 'started_at'),
+    )
+
+
+# ============= Tool Execution History =============
+
+class ToolExecutionStatus(str, PyEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    RATE_LIMITED = "rate_limited"
+
+
+class ToolExecution(Base):
+    """Track tool execution history for observability."""
+    __tablename__ = "tool_executions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    execution_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    trace_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    agent_execution_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+
+    # Tool info
+    tool_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    tool_type: Mapped[str] = mapped_column(String(100), nullable=False)  # web_search, llm_call, database, api_call, etc.
+    tool_version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Input/Output
+    input_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    output_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Status & Timing
+    status: Mapped[ToolExecutionStatus] = mapped_column(Enum(ToolExecutionStatus), default=ToolExecutionStatus.PENDING, nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    duration_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # Resource usage
+    retries: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rate_limit_remaining: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Cost tracking
+    estimated_cost_usd: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # Organization context
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    organization_id: Mapped[Optional[int]] = mapped_column(ForeignKey("organizations.id"), nullable=True, index=True)
+
+    # Metadata
+    exec_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+
+    __table_args__ = (
+        Index('ix_tool_exec_trace', 'trace_id'),
+        Index('ix_tool_exec_agent', 'agent_execution_id'),
+        Index('ix_tool_exec_tool_status', 'tool_name', 'status'),
+        Index('ix_tool_exec_org_time', 'organization_id', 'started_at'),
+    )

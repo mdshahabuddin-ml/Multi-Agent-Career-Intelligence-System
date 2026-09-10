@@ -10,7 +10,7 @@ const researchService = {
     */
 
     async startResearch(data) {
-        const response = await api.post("/api/research/start", data);
+        const response = await api.post("/api/research", data);
         return response.data;
     },
 
@@ -43,7 +43,7 @@ const researchService = {
     */
 
     async cancelResearch(researchId) {
-        const response = await api.post(`/api/research/${researchId}/cancel`);
+        const response = await api.delete(`/api/research/${researchId}`);
         return response.data;
     },
 
@@ -53,8 +53,8 @@ const researchService = {
     |--------------------------------------------------------------------------
     */
 
-    async listResearch(params = {}) {
-        const response = await api.get("/api/research", { params });
+    async listResearch(params = {}, signal) {
+        const response = await api.get("/api/research", { params, signal });
         return response.data;
     },
 

@@ -63,7 +63,7 @@ class CareerGoalResponse(BaseModel):
     user_id: int
     title: str
     description: str
-    target_date: date
+    target_date: Optional[date] = None
     target_role: Optional[str] = None
     target_skills: List[str]
     milestones: List[Dict[str, Any]]
@@ -214,7 +214,7 @@ async def list_career_goals(
     goals = career_service.get_career_goals(current_user.id)
     return [
         CareerGoalResponse(
-            id=g.id,
+            id=str(g.id),
             user_id=g.user_id,
             title=g.title,
             description=g.description,

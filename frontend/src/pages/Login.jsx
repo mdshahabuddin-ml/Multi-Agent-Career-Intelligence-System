@@ -21,7 +21,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await authService.login(email, password);
+      const response = await authService.login({ email, password });
       login(response.access_token, response.user);
       navigate("/dashboard");
     } catch (err) {

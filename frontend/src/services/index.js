@@ -12,6 +12,7 @@ export { default as coverLetterService } from "./coverLetterService";
 export { default as answerService } from "./answerService";
 export { default as jobSearchService } from "./jobSearchService";
 export { default as learningService, LearningStyle, DifficultyLevel, ResourceType } from "./learningService";
+export { default as contentCalendarService } from "./contentCalendarService";
 
 export default {
     api: null,
@@ -28,4 +29,5 @@ export default {
     answerService: null,
     jobSearchService: null,
     learningService: null,
+    contentCalendarService: null,
 };

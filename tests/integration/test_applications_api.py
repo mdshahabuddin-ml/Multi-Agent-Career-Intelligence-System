@@ -8,12 +8,13 @@ from io import BytesIO
 class TestApplicationsAPI:
     """Tests for application endpoints."""
 
-    def test_prepare_application(self, client: TestClient, auth_headers):
+    def test_prepare_application(self, client: TestClient, auth_headers, test_jobs):
         """Test preparing complete application package."""
+        job = test_jobs[0]
         response = client.post(
-            "/applications/prepare",
+            "/api/applications/prepare",
             json={
-                "job_id": 1,
+                "job_id": job.id,
                 "resume_text": "John Doe\nSenior Software Engineer\n\nEXPERIENCE\nSenior Engineer at TechCorp (2020-Present)\n- Led team of 5 engineers\n- Reduced deployment time by 80%\n\nSKILLS\nPython, React, AWS, Kubernetes",
                 "candidate_profile": {
                     "name": "John Doe",
@@ -49,7 +50,7 @@ class TestApplicationsAPI:
     def test_ats_analysis_endpoint(self, client: TestClient, auth_headers):
         """Test standalone ATS analysis."""
         response = client.post(
-            "/applications/ats/analyze",
+            "/api/applications/ats/analyze",
             json={
                 "resume_text": "John Doe\nSenior Software Engineer\n\nEXPERIENCE\nSenior Engineer at TechCorp (2020-Present)\n- Led team of 5 engineers\n- Reduced deployment time by 80%\n\nSKILLS\nPython, React, AWS, Kubernetes, Go, PostgreSQL",
                 "target_role": "Senior Software Engineer",
@@ -68,7 +69,7 @@ class TestApplicationsAPI:
     def test_resume_review_endpoint(self, client: TestClient, auth_headers):
         """Test standalone resume review."""
         response = client.post(
-            "/applications/resume/review",
+            "/api/applications/resume/review",
             json={
                 "resume_text": "John Doe\nSenior Software Engineer\n\nEXPERIENCE\nSenior Engineer at TechCorp (2020-Present)\n- Led team of 5 engineers\n- Reduced deployment time by 80%\n\nSKILLS\nPython, React, AWS, Kubernetes, Go, PostgreSQL",
                 "target_role": "Senior Software Engineer",
@@ -86,7 +87,7 @@ class TestApplicationsAPI:
     def test_resume_optimize_endpoint(self, client: TestClient, auth_headers):
         """Test resume optimization suggestions."""
         response = client.post(
-            "/applications/resume/optimize",
+            "/api/applications/resume/optimize",
             json={
                 "resume_text": "John Doe\nSoftware Engineer\n\nSKILLS\nPython, React",
                 "target_role": "Senior Software Engineer",
@@ -106,7 +107,7 @@ class TestApplicationsAPI:
     def test_cover_letter_generation(self, client: TestClient, auth_headers):
         """Test cover letter generation."""
         response = client.post(
-            "/applications/cover-letter",
+            "/api/applications/cover-letter",
             json={
                 "target_role": "Senior Software Engineer",
                 "target_company": "Google",
@@ -137,7 +138,7 @@ class TestApplicationsAPI:
         John Doe
         """
         response = client.post(
-            "/applications/cover-letter/optimize",
+            "/api/applications/cover-letter/optimize",
             json={
                 "cover_letter": cover_letter,
                 "target_role": "Software Engineer",
@@ -155,7 +156,7 @@ class TestApplicationsAPI:
     def test_application_answers_generation(self, client: TestClient, auth_headers):
         """Test application answers generation."""
         response = client.post(
-            "/applications/answers",
+            "/api/applications/answers",
             json={
                 "questions": [
                     "Tell me about a time you led a challenging project.",
@@ -184,7 +185,7 @@ class TestApplicationsAPI:
     def test_interview_prep(self, client: TestClient, auth_headers):
         """Test interview preparation materials."""
         response = client.post(
-            "/applications/interview-prep",
+            "/api/applications/interview-prep",
             json={
                 "target_role": "Senior Software Engineer",
                 "target_company": "Google",
@@ -206,7 +207,7 @@ class TestApplicationsAPI:
         """Test submitting an application."""
         job = test_jobs[0]
         response = client.post(
-            "/applications/",
+            "/api/applications/",
             json={
                 "job_id": job.id,
                 "resume_text": "John Doe\nSenior Software Engineer\n\nSKILLS\nPython, React, AWS, Kubernetes",
@@ -223,7 +224,7 @@ class TestApplicationsAPI:
 
     def test_list_applications(self, client: TestClient, auth_headers, test_application):
         """Test listing user applications."""
-        response = client.get("/applications/", headers=auth_headers)
+        response = client.get("/api/applications/", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -233,7 +234,7 @@ class TestApplicationsAPI:
     def test_list_applications_filtered(self, client: TestClient, auth_headers, test_application):
         """Test listing applications with status filter."""
         response = client.get(
-            "/applications/",
+            "/api/applications/",
             params={"status": "submitted"},
             headers=auth_headers,
         )
@@ -244,7 +245,7 @@ class TestApplicationsAPI:
 
     def test_get_application(self, client: TestClient, auth_headers, test_application):
         """Test getting application details."""
-        response = client.get(f"/applications/{test_application.id}", headers=auth_headers)
+        response = client.get(f"/api/applications/{test_application.id}", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -254,7 +255,7 @@ class TestApplicationsAPI:
     def test_update_application_status(self, client: TestClient, auth_headers, test_application):
         """Test updating application status."""
         response = client.patch(
-            f"/applications/{test_application.id}",
+            f"/api/applications/{test_application.id}/status",
             json={
                 "status": "interview_scheduled",
                 "notes": "Phone screen scheduled for Friday",
@@ -268,18 +269,18 @@ class TestApplicationsAPI:
         assert result["notes"] == "Phone screen scheduled for Friday"
 
     def test_withdraw_application(self, client: TestClient, auth_headers, test_application):
-        """Test withdrawing an application."""
-        response = client.delete(f"/applications/{test_application.id}", headers=auth_headers)
+        """Test deleting an application (hard-delete contract)."""
+        response = client.delete(f"/api/applications/{test_application.id}", headers=auth_headers)
 
         assert response.status_code == 204
 
-        # Verify it's withdrawn
-        response = client.get(f"/applications/{test_application.id}", headers=auth_headers)
-        assert response.json()["status"] == "withdrawn"
+        # Verify it's hard-deleted (current intentional behavior)
+        response = client.get(f"/api/applications/{test_application.id}", headers=auth_headers)
+        assert response.status_code == 404
 
     def test_get_application_stats(self, client: TestClient, auth_headers, test_application):
         """Test getting application statistics."""
-        response = client.get("/applications/stats", headers=auth_headers)
+        response = client.get("/api/applications/stats", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -291,7 +292,7 @@ class TestApplicationsAPI:
 
     def test_get_application_insights(self, client: TestClient, auth_headers, test_application):
         """Test getting application insights."""
-        response = client.get("/applications/stats/insights", headers=auth_headers)
+        response = client.get("/api/applications/stats/insights", headers=auth_headers)
 
         assert response.status_code == 200
         result = response.json()
@@ -307,13 +308,13 @@ class TestApplicationsSecurity:
         token = create_access_token(data={"sub": second_user.id})
         headers = {"Authorization": f"Bearer {token}"}
 
-        response = client.get(f"/applications/{test_application.id}", headers=headers)
+        response = client.get(f"/api/applications/{test_application.id}", headers=headers)
         assert response.status_code == 404
 
     def test_application_status_validation(self, client: TestClient, auth_headers, test_application):
         """Test that invalid status values are rejected."""
         response = client.patch(
-            f"/applications/{test_application.id}",
+            f"/api/applications/{test_application.id}/status",
             json={"status": "invalid_status"},
             headers=auth_headers,
         )

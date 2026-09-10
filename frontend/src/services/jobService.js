@@ -105,8 +105,8 @@ const jobService = {
     |--------------------------------------------------------------------------
     */
 
-    async getSavedJobs() {
-        const response = await api.get("/api/jobs/saved");
+    async getSavedJobs(signal) {
+        const response = await api.get("/api/jobs/saved", { signal });
         return response.data;
     },
 
@@ -119,30 +119,6 @@ const jobService = {
 
     async getRequirements(jobId) {
         const response = await api.get(`/api/jobs/${jobId}/requirements`);
-        return response.data;
-    },
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Job Match Score
-    |--------------------------------------------------------------------------
-    */
-
-    async getJobMatch(jobId) {
-        const response = await api.get(`/api/jobs/${jobId}/match`);
-        return response.data;
-    },
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Job Stats
-    |--------------------------------------------------------------------------
-    */
-
-    async getJobStats() {
-        const response = await api.get("/api/jobs/stats");
         return response.data;
     },
 

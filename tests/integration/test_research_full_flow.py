@@ -7,33 +7,54 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from backend.main import app
-from backend.database import get_db, Base, engine
+from backend.database import get_db, Base
 from backend.models import User, Research, ResearchStatus, ResearchType
 from backend.services.research_service import ResearchService
 from backend.api.auth import create_access_token
 
 
+# NOTE: These fixtures intentionally use an isolated in-memory database.
+# A previous revision bound them to the real dev engine (backend.database
+# engine + drop_all), which wiped the developer database on every run.
+# Never point test fixtures at the real engine.
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+_test_engine = create_engine(
+    "sqlite:///:memory:",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+_TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_test_engine)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_testing_mode():
-    """Enable testing mode for security middleware."""
+    """Ensure testing mode stays enabled for security middleware.
+
+    Root conftest already enables TESTING at import; this guard only
+    re-asserts it and deliberately does NOT disable it on teardown, so
+    later test modules are never affected.
+    """
     from backend.security.config import security_config
     security_config.TESTING = True
     yield
-    security_config.TESTING = False
+    security_config.TESTING = True
 
 
 @pytest.fixture(scope="session")
 def db_engine():
-    Base.metadata.create_all(bind=engine)
-    yield engine
-    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=_test_engine)
+    yield _test_engine
+    Base.metadata.drop_all(bind=_test_engine)
 
 
 @pytest.fixture
 def db_session(db_engine):
     connection = db_engine.connect()
     transaction = connection.begin()
-    session = Session(bind=connection)
+    session = _TestSessionLocal(bind=connection)
     yield session
     session.close()
     transaction.rollback()
@@ -137,7 +158,7 @@ class TestResearchAPI:
     def test_create_research(self, client, auth_headers, mock_search_provider):
         """Test creating a new research task."""
         response = client.post(
-            "/research",
+            "/api/research",
             json={
                 "query": "AI engineering job trends 2024",
                 "research_type": "job_market",
@@ -168,7 +189,7 @@ class TestResearchAPI:
             session.add(research)
         session.commit()
 
-        response = client.get("/research", headers=auth_headers)
+        response = client.get("/api/research", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 3
@@ -190,7 +211,7 @@ class TestResearchAPI:
             session.add(research)
         session.commit()
 
-        response = client.get("/research?status=completed", headers=auth_headers)
+        response = client.get("/api/research?status=completed", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
@@ -214,7 +235,7 @@ class TestResearchAPI:
         session.commit()
         session.refresh(research)
 
-        response = client.get(f"/research/{research.id}/status", headers=auth_headers)
+        response = client.get(f"/api/research/{research.id}/status", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["research_id"] == research.id
@@ -226,7 +247,7 @@ class TestResearchAPI:
 
     def test_get_research_not_found(self, client, auth_headers):
         """Test getting non-existent research."""
-        response = client.get("/research/99999/status", headers=auth_headers)
+        response = client.get("/api/research/99999/status", headers=auth_headers)
         assert response.status_code == 404
 
     def test_cancel_research(self, client, auth_headers, test_user):
@@ -243,7 +264,7 @@ class TestResearchAPI:
         session.commit()
         session.refresh(research)
 
-        response = client.delete(f"/research/{research.id}", headers=auth_headers)
+        response = client.delete(f"/api/research/{research.id}", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "Research cancelled"
@@ -267,7 +288,7 @@ class TestResearchAPI:
         session.commit()
         session.refresh(research)
 
-        response = client.delete(f"/research/{research.id}", headers=auth_headers)
+        response = client.delete(f"/api/research/{research.id}", headers=auth_headers)
         assert response.status_code == 400
 
     def test_export_research_report_markdown(self, client, auth_headers, test_user):
@@ -289,7 +310,7 @@ class TestResearchAPI:
         session.refresh(research)
 
         response = client.post(
-            f"/research/{research.id}/export",
+            f"/api/research/{research.id}/export",
             json={"format": "markdown"},
             headers=auth_headers,
         )
@@ -316,7 +337,7 @@ class TestResearchAPI:
         session.refresh(research)
 
         response = client.post(
-            f"/research/{research.id}/export",
+            f"/api/research/{research.id}/export",
             json={"format": "html"},
             headers=auth_headers,
         )
@@ -346,7 +367,7 @@ class TestResearchAPI:
         session.commit()
         session.refresh(research)
 
-        response = client.get(f"/research/{research.id}/report", headers=auth_headers)
+        response = client.get(f"/api/research/{research.id}/report", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == research.id

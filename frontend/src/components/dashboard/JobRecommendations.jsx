@@ -18,28 +18,40 @@ function JobRecommendations() {
   });
 
   useEffect(() => {
-    loadRecommendations();
+    const controller = new AbortController();
+    loadRecommendations(false, controller.signal);
+    return () => controller.abort();
   }, []);
 
-  const loadRecommendations = async (append = false) => {
+  useEffect(() => {
+    if (page > 1) {
+      const controller = new AbortController();
+      loadRecommendations(true, controller.signal);
+      return () => controller.abort();
+    }
+  }, [page]);
+
+  const loadRecommendations = async (append = false, signal) => {
     try {
       setLoading(true);
       const data = await jobSearchService.getRecommendations({
         ...filters,
         page,
         limit: 10,
-      });
+      }, signal);
       if (append) {
         setRecommendations(prev => [...prev, ...data.recommendations]);
       } else {
         setRecommendations(data.recommendations);
       }
       setHasMore(data.recommendations.length >= 10);
-    } catch (err) {
-      setError("Failed to load recommendations");
-    } finally {
-      setLoading(false);
-    }
+} catch (err) {
+        if (err.name === "CanceledError" || err.name === "AbortError") return;
+        const message = err.response?.data?.detail || err.message || "Failed to load recommendations";
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
   };
 
   const handleFilterChange = (key, value) => {
@@ -64,7 +76,6 @@ function JobRecommendations() {
             value={filters.location}
             onChange={e => handleFilterChange("location", e.target.value)}
             className="filter-input"
-            placeholder="Location"
           />
           <select
             value={filters.experience_level}
@@ -93,7 +104,6 @@ function JobRecommendations() {
             value={filters.salary_min}
             onChange={e => handleFilterChange("salary_min", e.target.value)}
             className="filter-input"
-            placeholder="Min Salary"
           />
         </div>
       </div>

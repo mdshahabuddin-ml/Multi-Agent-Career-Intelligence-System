@@ -70,6 +70,43 @@ class Settings(BaseSettings):
     MOCK_DATA: bool = True
     DATA_PIPELINE_ENABLED: bool = True
 
+    # Hermes Agent
+    HERMES_ENABLED: bool = True
+    HERMES_MAX_CONCURRENT_TASKS: int = 10
+    HERMES_DEFAULT_TIMEOUT: int = 300
+    HERMES_MEMORY_LIMIT: int = 1000
+    HERMES_SKILL_DIR: str = "data/hermes/skills"
+    HERMES_TASK_DIR: str = "data/hermes/tasks"
+    HERMES_MEMORY_DIR: str = "data/hermes/memory"
+
+    # Content Engine
+    CONTENT_ENGINE_ENABLED: bool = True
+    CONTENT_DEFAULT_TONE: str = "professional"
+    CONTENT_MAX_LENGTH: int = 5000
+
+    # Social Integrations
+    SOCIAL_ENABLED: bool = True
+    LINKEDIN_CLIENT_ID: str = ""
+    LINKEDIN_CLIENT_SECRET: str = ""
+    TWITTER_API_KEY: str = ""
+    TWITTER_API_SECRET: str = ""
+    INSTAGRAM_CLIENT_ID: str = ""
+    INSTAGRAM_CLIENT_SECRET: str = ""
+    FACEBOOK_APP_ID: str = ""
+    FACEBOOK_APP_SECRET: str = ""
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    LINKEDIN_REDIRECT_URI: str = ""
+    FACEBOOK_REDIRECT_URI: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+    SOCIAL_TOKEN_KEY: str = ""
+
+    # Observability (OpenTelemetry -> Phoenix). Disabled by default; the
+    # backend/observability package no-ops unless OTEL_ENABLED is true.
+    OTEL_ENABLED: bool = False
+    OTEL_SERVICE_NAME: str = "careerintel-backend"
+    PHOENIX_OTLP_ENDPOINT: str = "http://localhost:4318/v1/traces"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
