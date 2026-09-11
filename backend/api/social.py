@@ -28,6 +28,18 @@ class SocialAccountConnectRequest(BaseModel):
     state: Optional[str] = None
 
 
+class ManualLinkedInRequest(BaseModel):
+    profile_url: str
+
+
+class ManualYouTubeRequest(BaseModel):
+    channel_url: str
+
+
+class ManualGitHubRequest(BaseModel):
+    profile_url: str
+
+
 @router.get("/accounts")
 async def list_accounts(
     current_user: User = Depends(get_current_active_user),
@@ -55,6 +67,36 @@ async def connect_account(
         return service.begin_connect(current_user.id, request.platform, request.redirect_uri)
     except OAuthError as exc:
         raise HTTPException(status_code=_oauth_status(exc), detail=_oauth_detail(exc))
+
+
+@router.post("/accounts/linkedin-manual", status_code=status.HTTP_201_CREATED)
+async def connect_linkedin_manual(
+    request: ManualLinkedInRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: SocialAccountService = Depends(get_account_service),
+):
+    """Manually connect a LinkedIn profile by URL (no OAuth required)."""
+    return service.manual_connect_linkedin(current_user.id, request.profile_url)
+
+
+@router.post("/accounts/youtube-manual", status_code=status.HTTP_201_CREATED)
+async def connect_youtube_manual(
+    request: ManualYouTubeRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: SocialAccountService = Depends(get_account_service),
+):
+    """Manually connect a YouTube channel by URL (no OAuth required)."""
+    return service.manual_connect_youtube(current_user.id, request.channel_url)
+
+
+@router.post("/accounts/github-manual", status_code=status.HTTP_201_CREATED)
+async def connect_github_manual(
+    request: ManualGitHubRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: SocialAccountService = Depends(get_account_service),
+):
+    """Manually connect a GitHub profile by URL (no OAuth required)."""
+    return service.manual_connect_github(current_user.id, request.profile_url)
 
 
 @router.get("/accounts/callback")

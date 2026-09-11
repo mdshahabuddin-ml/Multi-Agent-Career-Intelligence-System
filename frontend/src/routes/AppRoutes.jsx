@@ -25,6 +25,7 @@ import AgentMemoryPage from "../pages/AgentMemory";
 import AgentSkillsPage from "../pages/AgentSkills";
 import Content from "../pages/Content";
 import SocialMedia from "../pages/SocialMedia";
+import SocialCallback from "../pages/SocialCallback";
 import ContentAnalytics from "../pages/ContentAnalytics";
 
 import AppLayout from "../components/common/AppLayout";
@@ -165,6 +166,8 @@ function AppRoutes() {
 
       </Route>
 
+      {/* Social OAuth callback - outside ProtectedRoute, auth token handled in component */}
+      <Route path="/social/callback" element={<SocialCallback />} />
 
       {/* ==========================
           Default Route

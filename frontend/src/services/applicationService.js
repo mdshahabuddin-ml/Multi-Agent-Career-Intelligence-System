@@ -70,7 +70,8 @@ const applicationService = {
     */
 
     async updateStatus(applicationId, status) {
-        const response = await api.patch(`/api/applications/${applicationId}/status`, { status });
+        const body = typeof status === "string" ? { status } : status;
+        const response = await api.patch(`/api/applications/${applicationId}/status`, body);
         return response.data;
     },
 

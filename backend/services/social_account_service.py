@@ -116,6 +116,186 @@ class SocialAccountService:
         )
         return {"authorization_url": url, "state": state, "platform": platform}
 
+    # ------------------------------------------------------------------
+    # Manual LinkedIn connect (no OAuth required)
+    # ------------------------------------------------------------------
+    def manual_connect_linkedin(self, user_id: int, profile_url: str) -> Dict[str, Any]:
+        """Manually connect a LinkedIn profile by URL without OAuth."""
+        import re
+        from urllib.parse import urlparse
+
+        parsed = urlparse(profile_url)
+        if "linkedin.com" not in parsed.netloc:
+            raise OAuthError("linkedin", "Invalid LinkedIn URL")
+
+        match = re.search(r"/in/([^/]+)", parsed.path)
+        if not match:
+            raise OAuthError("linkedin", "Invalid LinkedIn profile URL format")
+
+        slug = match.group(1)
+        account_id = f"linkedin_{slug}"
+
+        existing = (
+            self.db.query(SocialAccount)
+            .filter(
+                SocialAccount.user_id == user_id,
+                SocialAccount.platform == "linkedin",
+                SocialAccount.account_id == account_id,
+            )
+            .first()
+        )
+        if existing:
+            existing.account_name = slug
+            existing.profile_data_json = {"profile_url": profile_url, "manual": True}
+            existing.enabled = True
+            existing.last_synced_at = datetime.utcnow()
+            self.db.commit()
+            self.db.refresh(existing)
+            return public_account(existing)
+
+        account = SocialAccount(
+            user_id=user_id,
+            platform="linkedin",
+            account_id=account_id,
+            account_name=slug,
+            profile_data_json={"profile_url": profile_url, "manual": True},
+            enabled=True,
+            last_synced_at=datetime.utcnow(),
+        )
+        self.db.add(account)
+        self.db.commit()
+        self.db.refresh(account)
+        logger.info("Manually connected LinkedIn profile %s for user %s", slug, user_id)
+        return public_account(account)
+
+    # ------------------------------------------------------------------
+    # Manual YouTube connect (no OAuth required)
+    # ------------------------------------------------------------------
+    def manual_connect_youtube(self, user_id: int, channel_url: str) -> Dict[str, Any]:
+        """Manually connect a YouTube channel by URL without OAuth."""
+        import re
+        from urllib.parse import urlparse
+
+        channel_url = channel_url.strip()
+
+        if channel_url.startswith("@"):
+            channel_id = channel_url[1:]
+        elif "youtube.com" in channel_url or "youtu.be" in channel_url:
+            parsed = urlparse(channel_url)
+            channel_id = None
+            if "/channel/" in parsed.path:
+                match = re.search(r"/channel/([^/]+)", parsed.path)
+                if match:
+                    channel_id = match.group(1)
+            elif "/c/" in parsed.path or "/user/" in parsed.path:
+                match = re.search(r"/(?:c|user)/([^/]+)", parsed.path)
+                if match:
+                    channel_id = match.group(1)
+            elif "/@" in parsed.path:
+                match = re.search(r"/@([^/]+)", parsed.path)
+                if match:
+                    channel_id = match.group(1)
+            elif "youtu.be" in parsed.netloc:
+                channel_id = parsed.path.lstrip("/")
+            if not channel_id:
+                raise OAuthError("youtube", "Invalid YouTube channel URL format")
+        else:
+            channel_id = channel_url.lstrip("@")
+
+        account_id = f"youtube_{channel_id}"
+
+        existing = (
+            self.db.query(SocialAccount)
+            .filter(
+                SocialAccount.user_id == user_id,
+                SocialAccount.platform == "youtube",
+                SocialAccount.account_id == account_id,
+            )
+            .first()
+        )
+        if existing:
+            existing.account_name = channel_id
+            existing.profile_data_json = {"channel_url": channel_url, "manual": True}
+            existing.enabled = True
+            existing.last_synced_at = datetime.utcnow()
+            self.db.commit()
+            self.db.refresh(existing)
+            return public_account(existing)
+
+        account = SocialAccount(
+            user_id=user_id,
+            platform="youtube",
+            account_id=account_id,
+            account_name=channel_id,
+            profile_data_json={"channel_url": channel_url, "manual": True},
+            enabled=True,
+            last_synced_at=datetime.utcnow(),
+        )
+        self.db.add(account)
+        self.db.commit()
+        self.db.refresh(account)
+        logger.info("Manually connected YouTube channel %s for user %s", channel_id, user_id)
+        return public_account(account)
+
+    # ------------------------------------------------------------------
+    # Manual GitHub connect (no OAuth required)
+    # ------------------------------------------------------------------
+    def manual_connect_github(self, user_id: int, profile_url: str) -> Dict[str, Any]:
+        """Manually connect a GitHub profile by URL without OAuth."""
+        import re
+        from urllib.parse import urlparse
+
+        profile_url = profile_url.strip()
+
+        if profile_url.startswith("github.com/"):
+            username = profile_url.replace("github.com/", "").strip("/")
+        elif "github.com" in profile_url:
+            parsed = urlparse(profile_url)
+            path_parts = parsed.path.strip("/").split("/")
+            if not path_parts or not path_parts[0]:
+                raise OAuthError("github", "Invalid GitHub profile URL")
+            username = path_parts[0]
+        else:
+            username = profile_url.strip("/@")
+
+        if not username or "/" in username:
+            raise OAuthError("github", "Invalid GitHub username")
+
+        account_id = f"github_{username}"
+
+        existing = (
+            self.db.query(SocialAccount)
+            .filter(
+                SocialAccount.user_id == user_id,
+                SocialAccount.platform == "github",
+                SocialAccount.account_id == account_id,
+            )
+            .first()
+        )
+        if existing:
+            existing.account_name = username
+            existing.profile_data_json = {"profile_url": f"https://github.com/{username}", "manual": True}
+            existing.enabled = True
+            existing.last_synced_at = datetime.utcnow()
+            self.db.commit()
+            self.db.refresh(existing)
+            return public_account(existing)
+
+        account = SocialAccount(
+            user_id=user_id,
+            platform="github",
+            account_id=account_id,
+            account_name=username,
+            profile_data_json={"profile_url": f"https://github.com/{username}", "manual": True},
+            enabled=True,
+            last_synced_at=datetime.utcnow(),
+        )
+        self.db.add(account)
+        self.db.commit()
+        self.db.refresh(account)
+        logger.info("Manually connected GitHub profile %s for user %s", username, user_id)
+        return public_account(account)
+
     def _validate_state(self, user_id: int, platform: str, state: str) -> Dict[str, Any]:
         try:
             data = _signer().loads(state, max_age=STATE_MAX_AGE_SECONDS)

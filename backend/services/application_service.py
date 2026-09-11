@@ -226,18 +226,6 @@ class ApplicationService:
 
         job = self.db.query(Job).filter(Job.id == job_id).first() if job_id else None
 
-        if job_id and not job:
-            raise HTTPException(status_code=404, detail=f"Job with id {job_id} not found")
-
-        # Check if already applied
-        if job:
-            existing = self.db.query(ApplicationModel).filter(
-                ApplicationModel.user_id == user_id,
-                ApplicationModel.job_id == job_id,
-            ).first()
-            if existing:
-                raise HTTPException(status_code=400, detail="Already applied to this job")
-
         application = ApplicationModel(
             user_id=user_id,
             job_id=job_id,

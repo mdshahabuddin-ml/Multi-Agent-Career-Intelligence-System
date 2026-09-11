@@ -243,19 +243,14 @@ async def create_application(
     application_service: ApplicationService = Depends(get_application_service),
 ):
     """Submit application to a job."""
-    try:
-        application = application_service.apply_to_job(
-            user_id=current_user.id,
-            job_id=request.job_id,
-            resume_text=request.resume_text,
-            cover_letter=request.cover_letter,
-            answers=request.answers,
-        )
-        return ApplicationResponse.model_validate(application)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    application = application_service.apply_to_job(
+        user_id=current_user.id,
+        job_id=request.job_id,
+        resume_text=request.resume_text,
+        cover_letter=request.cover_letter,
+        answers=request.answers,
+    )
+    return ApplicationResponse.model_validate(application)
 
 
 @router.get("/", response_model=List[ApplicationListResponse])

@@ -6,10 +6,41 @@ const socialService = {
     return response.data;
   },
 
-  async connectAccount(platform, authCode = null) {
+  async connectAccount(platform, redirectUri = null) {
     const response = await api.post("/api/social/accounts/connect", {
       platform,
-      auth_code: authCode,
+      redirect_uri: redirectUri,
+    });
+    return response.data;
+  },
+
+  async completeConnect(platform, code, state, redirectUri = null) {
+    const response = await api.post("/api/social/accounts/connect", {
+      platform,
+      code,
+      state,
+      redirect_uri: redirectUri,
+    });
+    return response.data;
+  },
+
+  async manualConnectLinkedIn(profileUrl) {
+    const response = await api.post("/api/social/accounts/linkedin-manual", {
+      profile_url: profileUrl,
+    });
+    return response.data;
+  },
+
+  async manualConnectYouTube(channelUrl) {
+    const response = await api.post("/api/social/accounts/youtube-manual", {
+      channel_url: channelUrl,
+    });
+    return response.data;
+  },
+
+  async manualConnectGitHub(profileUrl) {
+    const response = await api.post("/api/social/accounts/github-manual", {
+      profile_url: profileUrl,
     });
     return response.data;
   },
