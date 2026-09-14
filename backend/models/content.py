@@ -19,6 +19,7 @@ class Content(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     campaign_id: Mapped[Optional[int]] = mapped_column(ForeignKey("content_campaigns.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(255), default="")
+    original_question: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     content_type: Mapped[str] = mapped_column(String(50), default="post")
     body: Mapped[str] = mapped_column(Text, default="")
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

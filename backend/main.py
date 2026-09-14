@@ -5,6 +5,7 @@ from backend.config import settings
 from backend.api import auth, health, resume, jobs, research, career, applications, interview, evaluation, security, data_pipeline, personalization, organization, monitoring, admin, rate_limits, content_calendar, notifications, profile, dashboard
 from backend.api import hermes, memory, skills, automation, gateway, content, social, publishing
 from backend.api import career_content, content_analytics, hermes_optimization
+from backend.api import video_pipeline
 from backend.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -101,6 +102,7 @@ app.include_router(publishing.router, prefix="/api")
 app.include_router(career_content.router, prefix="/api")
 app.include_router(content_analytics.router, prefix="/api")
 app.include_router(hermes_optimization.router, prefix="/api")
+app.include_router(video_pipeline.router, prefix="/api")
 
 
 # ==========================================

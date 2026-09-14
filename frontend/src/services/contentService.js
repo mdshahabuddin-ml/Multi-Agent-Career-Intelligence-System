@@ -8,12 +8,13 @@ const contentService = {
     return response.data;
   },
 
-  async createContent(title, contentType = "post", body = "", tags = []) {
+  async createContent(title, contentType = "post", body = "", tags = [], originalQuestion = null) {
     const response = await api.post("/api/content/content", {
       title,
       content_type: contentType,
       body,
       tags,
+      original_question: originalQuestion,
     });
     return response.data;
   },

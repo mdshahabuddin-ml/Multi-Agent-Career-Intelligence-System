@@ -101,6 +101,17 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = ""
     SOCIAL_TOKEN_KEY: str = ""
 
+    # Video Generation (Google Veo)
+    VIDEO_GENERATION_ENABLED: bool = True
+    GOOGLE_CLOUD_PROJECT: str = ""
+    GOOGLE_APPLICATION_CREDENTIALS: str = ""
+    VEO_MODEL: str = "veo-2.0-generate-001"
+    VEO_REGION: str = "us-central1"
+    VIDEO_OUTPUT_BUCKET: str = "careerintel-videos"
+    VIDEO_MAX_SCENES: int = 5
+    VIDEO_SCENE_DURATION_SECONDS: int = 8
+    MOCK_VIDEO_GENERATION: bool = True
+
     # Observability (OpenTelemetry -> Phoenix). Disabled by default; the
     # backend/observability package no-ops unless OTEL_ENABLED is true.
     OTEL_ENABLED: bool = False

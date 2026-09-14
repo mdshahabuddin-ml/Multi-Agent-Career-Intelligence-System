@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import contentService from "../services/contentService";
 import publishingService from "../services/publishingService";
+import videoPipelineService from "../services/videoPipelineService";
 import Card from "../components/common/Card";
 import Loading from "../components/common/Loading";
+import VideoPreview from "../components/content/VideoPreview";
 
 function Content() {
   const [content, setContent] = useState([]);
@@ -18,9 +20,13 @@ function Content() {
     tags: "",
     privacy: "unlisted",
   });
+  const [pipelines, setPipelines] = useState({});
+  const [generatingVideo, setGeneratingVideo] = useState(null);
+  const [selectedPipeline, setSelectedPipeline] = useState(null);
 
   useEffect(() => {
     loadContent();
+    loadPipelines();
   }, []);
 
   const loadContent = async () => {
@@ -34,12 +40,49 @@ function Content() {
     }
   };
 
+  const loadPipelines = async () => {
+    try {
+      const data = await videoPipelineService.listPipelines();
+      const pipelineMap = {};
+      (data.pipelines || []).forEach((p) => {
+        pipelineMap[p.content_id] = p;
+      });
+      setPipelines(pipelineMap);
+    } catch (err) {
+      console.error("Failed to load pipelines:", err);
+    }
+  };
+
   const handleApprove = async (contentId) => {
     try {
       await contentService.updateContent(contentId, { status: "approved" });
       loadContent();
     } catch (err) {
       console.error("Failed to approve:", err);
+    }
+  };
+
+  const handleGenerateVideo = async (contentId) => {
+    setGeneratingVideo(contentId);
+    try {
+      await videoPipelineService.startPipeline(contentId);
+      loadPipelines();
+    } catch (err) {
+      console.error("Failed to generate video:", err);
+    } finally {
+      setGeneratingVideo(null);
+    }
+  };
+
+  const handleGenerateShort = async (contentId) => {
+    setGeneratingVideo(contentId);
+    try {
+      await videoPipelineService.startShortPipeline(contentId);
+      loadPipelines();
+    } catch (err) {
+      console.error("Failed to generate short:", err);
+    } finally {
+      setGeneratingVideo(null);
     }
   };
 
@@ -129,6 +172,61 @@ function Content() {
                       }}
                     >
                       Approve
+                    </button>
+                  )}
+                  {item.status === "approved" && !pipelines[item.id] && (
+                    <>
+                      <button
+                        onClick={() => handleGenerateVideo(item.id)}
+                        disabled={generatingVideo === item.id}
+                        style={{
+                          padding: "0.375rem 0.75rem",
+                          fontSize: "0.75rem",
+                          background: "#2563eb",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "0.25rem",
+                          cursor: generatingVideo === item.id ? "not-allowed" : "pointer",
+                          opacity: generatingVideo === item.id ? 0.7 : 1,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {generatingVideo === item.id ? "Generating..." : "Generate Video"}
+                      </button>
+                      <button
+                        onClick={() => handleGenerateShort(item.id)}
+                        disabled={generatingVideo === item.id}
+                        style={{
+                          padding: "0.375rem 0.75rem",
+                          fontSize: "0.75rem",
+                          background: "#7c3aed",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "0.25rem",
+                          cursor: generatingVideo === item.id ? "not-allowed" : "pointer",
+                          opacity: generatingVideo === item.id ? 0.7 : 1,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {generatingVideo === item.id ? "Generating..." : "Create Short"}
+                      </button>
+                    </>
+                  )}
+                  {item.status === "approved" && pipelines[item.id] && (
+                    <button
+                      onClick={() => setSelectedPipeline(pipelines[item.id])}
+                      style={{
+                        padding: "0.375rem 0.75rem",
+                        fontSize: "0.75rem",
+                        background: pipelines[item.id].status === "video_ready" ? "#16a34a" : "#6b7280",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "0.25rem",
+                        cursor: "pointer",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {pipelines[item.id].status === "video_ready" ? "View Video" : pipelines[item.id].status.replace(/_/g, " ")}
                     </button>
                   )}
                   {item.status === "approved" && (
@@ -276,6 +374,40 @@ function Content() {
                 {publishing ? "Publishing..." : "Publish"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Preview Modal */}
+      {selectedPipeline && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center",
+          justifyContent: "center", zIndex: 1000,
+        }}>
+          <div style={{
+            background: "white", borderRadius: "0.75rem", padding: "1.5rem",
+            width: "100%", maxWidth: "600px", maxHeight: "90vh", overflow: "auto",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 style={{ fontSize: "1.125rem", fontWeight: 600, margin: 0 }}>Video Preview</h3>
+              <button
+                onClick={() => setSelectedPipeline(null)}
+                style={{
+                  background: "none", border: "none", fontSize: "1.25rem",
+                  cursor: "pointer", color: "#6b7280",
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <VideoPreview
+              pipelineId={selectedPipeline.id}
+              onStatusChange={() => {
+                loadPipelines();
+                setSelectedPipeline(null);
+              }}
+            />
           </div>
         </div>
       )}

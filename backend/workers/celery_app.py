@@ -21,6 +21,7 @@ celery_app = Celery(
         "backend.workers.document_worker",
         "backend.workers.embedding_worker",
         "backend.workers.notification_worker",
+        "backend.workers.video_worker",
     ],
 )
 
@@ -33,6 +34,7 @@ celery_app.conf.update(
         "backend.workers.document_worker.*": {"queue": "documents"},
         "backend.workers.embedding_worker.*": {"queue": "embeddings"},
         "backend.workers.notification_worker.*": {"queue": "notifications"},
+        "backend.workers.video_worker.*": {"queue": "video"},
     },
     
     # Queue configuration
@@ -45,6 +47,7 @@ celery_app.conf.update(
         "documents": Queue("documents", routing_key="documents"),
         "embeddings": Queue("embeddings", routing_key="embeddings"),
         "notifications": Queue("notifications", routing_key="notifications"),
+        "video": Queue("video", routing_key="video"),
     },
     
     # Task execution settings
