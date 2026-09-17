@@ -3,31 +3,65 @@ import socialService from "../services/socialService";
 import contentService from "../services/contentService";
 import Card from "../components/common/Card";
 import Loading from "../components/common/Loading";
+import ErrorMessage from "../components/common/ErrorMessage";
+
+const PLATFORMS = [
+  { id: "linkedin", label: "LinkedIn", icon: "in", iconBg: "#0a66c2" },
+  { id: "youtube", label: "YouTube", icon: "▶", iconBg: "#ff0000" },
+  { id: "github", label: "GitHub", icon: "GH", iconBg: "#24292e" },
+];
+
+function platformLabel(id) {
+  return PLATFORMS.find(p => p.id === id)?.label || (id.charAt(0).toUpperCase() + id.slice(1));
+}
+
+function platformBrand(id) {
+  return PLATFORMS.find(p => p.id === id) || { label: platformLabel(id), icon: id.charAt(0).toUpperCase(), iconBg: "#6b7280" };
+}
+
+function formatLabel(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
 
 function ContentAnalytics() {
   const [accounts, setAccounts] = useState([]);
   const [content, setContent] = useState([]);
+  const [totalContent, setTotalContent] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     try {
+      setError(null);
+      setLoading(true);
       const [accountsData, contentData] = await Promise.all([
         socialService.listAccounts(),
         contentService.listContent(),
       ]);
       setAccounts(accountsData.accounts || []);
       setContent(contentData.content || []);
+      setTotalContent(
+        typeof contentData.total === "number" ? contentData.total : (contentData.content || []).length
+      );
     } catch (err) {
+      setError(err.response?.data?.detail || err.message || "Failed to load analytics");
       console.error("Failed to load data:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const getPlatformStats = (platform) => {
     const acc = accounts.find(a => a.platform === platform);
@@ -38,106 +72,136 @@ function ContentAnalytics() {
     };
   };
 
-  const linkedin = getPlatformStats("linkedin");
-  const youtube = getPlatformStats("youtube");
-  const github = getPlatformStats("github");
+  const thisMonthCount = content.filter(item => {
+    if (!item.created_at) return false;
+    const d = new Date(item.created_at);
+    const now = new Date();
+    return !Number.isNaN(d.getTime()) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "youtube", label: "YouTube" },
+    { id: "linkedin", label: "LinkedIn" },
+    { id: "github", label: "GitHub" },
+  ];
 
   if (loading) return <Loading />;
+  if (error) return (
+    <div className="page analytics-page">
+      <div className="analytics-head">
+        <h1>Content Analytics</h1>
+      </div>
+      <Card>
+        <ErrorMessage message={error} />
+        <div className="analytics-retry">
+          <button type="button" className="analytics-ghostbtn" onClick={loadData}>Retry</button>
+        </div>
+      </Card>
+    </div>
+  );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827" }}>Content Analytics</h2>
-
-      {/* Stats Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-        <div style={{ background: "white", borderRadius: "0.75rem", padding: "1.25rem", border: "1px solid #e5e7eb" }}>
-          <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>Total Content</p>
-          <p style={{ fontSize: "2rem", fontWeight: 700, color: "#111827", margin: "0.25rem 0" }}>{content.length}</p>
-          <p style={{ fontSize: "0.75rem", color: "#16a34a" }}>All platforms</p>
-        </div>
-        <div style={{ background: "white", borderRadius: "0.75rem", padding: "1.25rem", border: "1px solid #e5e7eb" }}>
-          <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>LinkedIn</p>
-          <p style={{ fontSize: "2rem", fontWeight: 700, color: "#0a66c2", margin: "0.25rem 0" }}>{linkedin.connected ? "✓" : "—"}</p>
-          <p style={{ fontSize: "0.75rem", color: linkedin.connected ? "#16a34a" : "#6b7280" }}>
-            {linkedin.connected ? "Connected" : "Not connected"}
-          </p>
-        </div>
-        <div style={{ background: "white", borderRadius: "0.75rem", padding: "1.25rem", border: "1px solid #e5e7eb" }}>
-          <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>YouTube</p>
-          <p style={{ fontSize: "2rem", fontWeight: 700, color: "#ff0000", margin: "0.25rem 0" }}>{youtube.connected ? "✓" : "—"}</p>
-          <p style={{ fontSize: "0.75rem", color: youtube.connected ? "#16a34a" : "#6b7280" }}>
-            {youtube.connected ? "Connected" : "Not connected"}
-          </p>
-        </div>
-        <div style={{ background: "white", borderRadius: "0.75rem", padding: "1.25rem", border: "1px solid #e5e7eb" }}>
-          <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>GitHub</p>
-          <p style={{ fontSize: "2rem", fontWeight: 700, color: "#24292e", margin: "0.25rem 0" }}>{github.connected ? "✓" : "—"}</p>
-          <p style={{ fontSize: "0.75rem", color: github.connected ? "#16a34a" : "#6b7280" }}>
-            {github.connected ? "Connected" : "Not connected"}
-          </p>
+    <div className="page analytics-page">
+      <div className="analytics-head">
+        <div>
+          <h1>Content Analytics</h1>
+          <p>Performance and presence across your connected platforms.</p>
         </div>
       </div>
 
+      {/* Summary cards */}
+      <div className="analytics-summary">
+        <div className="analytics-summary-card primary">
+          <div className="analytics-summary-top">
+            <span className="analytics-summary-icon" aria-hidden="true">◉</span>
+            <span className="analytics-summary-label">Total Content</span>
+          </div>
+          <p className="analytics-summary-value">{totalContent}</p>
+          <p className="analytics-summary-sub">
+            Across all connected platforms{thisMonthCount > 0 ? ` · +${thisMonthCount} this month` : ""}
+          </p>
+        </div>
+        {PLATFORMS.map(p => {
+          const s = getPlatformStats(p.id);
+          return (
+            <div key={p.id} className="analytics-summary-card">
+              <div className="analytics-summary-top">
+                <span className="analytics-platform-icon" style={{ background: p.iconBg }} aria-hidden="true">
+                  {p.icon}
+                </span>
+                <span className="analytics-summary-label">{p.label}</span>
+              </div>
+              <p className={`analytics-connection ${s.connected ? "on" : "off"}`}>
+                <span aria-hidden="true">{s.connected ? "●" : "○"}</span> {s.connected ? "Connected" : "Not connected"}
+              </p>
+              <p className="analytics-summary-sub truncate" title={s.name}>{s.connected ? s.name : "—"}</p>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "0.5rem", borderBottom: "2px solid #e5e7eb", paddingBottom: "0" }}>
-        {["overview", "youtube", "linkedin", "github"].map(tab => (
+      <div className="analytics-tabs" role="tablist" aria-label="Analytics views">
+        {tabs.map(tab => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: "0.75rem 1.25rem",
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: "0.875rem",
-              color: activeTab === tab ? "#2563eb" : "#6b7280",
-              borderBottom: activeTab === tab ? "2px solid #2563eb" : "2px solid transparent",
-              marginBottom: "-2px",
-            }}
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`analytics-tab ${activeTab === tab.id ? "active" : ""}`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab.label}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
       {activeTab === "overview" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1rem" }}>
+        <div className="analytics-panels">
           <Card title="Connected Platforms">
             {accounts.length === 0 ? (
-              <p style={{ color: "#6b7280", textAlign: "center", padding: "1rem" }}>No platforms connected</p>
+              <div className="analytics-empty slim">
+                <h3>No platforms connected</h3>
+                <p>Connect a platform to see it here.</p>
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {accounts.map(acc => (
-                  <div key={acc.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem" }}>
-                    <div style={{
-                      width: "32px", height: "32px", borderRadius: "0.375rem",
-                      background: acc.platform === "linkedin" ? "#0a66c2" : acc.platform === "youtube" ? "#ff0000" : "#24292e",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: "white", fontWeight: 700, fontSize: "0.75rem"
-                    }}>
-                      {acc.platform === "linkedin" ? "in" : acc.platform === "youtube" ? "YT" : "GH"}
+              <div className="analytics-platform-list">
+                {accounts.map(acc => {
+                  const brand = platformBrand(acc.platform);
+                  return (
+                    <div key={acc.id} className="analytics-platform-row">
+                      <span className="analytics-platform-icon sm" style={{ background: brand.iconBg }} aria-hidden="true">
+                        {brand.icon}
+                      </span>
+                      <div className="analytics-platform-info">
+                        <p className="analytics-platform-name">{brand.label}</p>
+                        <p className="analytics-platform-user">{acc.account_name}</p>
+                      </div>
+                      <span className="analytics-connection on sm">
+                        <span aria-hidden="true">●</span> Connected
+                      </span>
                     </div>
-                    <div>
-                      <p style={{ fontWeight: 600, margin: 0, fontSize: "0.875rem" }}>{acc.platform}</p>
-                      <p style={{ color: "#6b7280", margin: 0, fontSize: "0.75rem" }}>{acc.account_name}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
 
           <Card title="Recent Content">
             {content.length === 0 ? (
-              <p style={{ color: "#6b7280", textAlign: "center", padding: "1rem" }}>No content yet. Create your first post!</p>
+              <div className="analytics-empty slim">
+                <h3>No content yet</h3>
+                <p>No content yet. Create your first post!</p>
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <div className="analytics-feed">
                 {content.slice(0, 5).map(item => (
-                  <div key={item.id} style={{ padding: "0.5rem", borderBottom: "1px solid #f3f4f6" }}>
-                    <p style={{ fontWeight: 600, margin: 0, fontSize: "0.875rem" }}>{item.title}</p>
-                    <p style={{ color: "#6b7280", margin: 0, fontSize: "0.75rem" }}>{item.content_type}</p>
+                  <div key={item.id} className="analytics-feed-item">
+                    <p className="analytics-feed-title">{item.title}</p>
+                    <p className="analytics-feed-meta">
+                      {[formatLabel(item.content_type), formatDate(item.created_at)].filter(Boolean).join(" · ")}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -146,132 +210,55 @@ function ContentAnalytics() {
         </div>
       )}
 
-      {activeTab === "youtube" && (
-        <Card title="YouTube Content">
-          {youtube.connected ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "1rem", background: "#fff5f5", borderRadius: "0.5rem" }}>
-                <div style={{ width: "48px", height: "48px", borderRadius: "0.5rem", background: "#ff0000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700 }}>
-                  YT
-                </div>
-                <div>
-                  <p style={{ fontWeight: 600, margin: 0 }}>{youtube.name}</p>
-                  <a href={youtube.url} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb", fontSize: "0.875rem" }}>View Channel</a>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Videos</p>
-                </div>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Views</p>
-                </div>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Subscribers</p>
-                </div>
-              </div>
-
-              <p style={{ color: "#6b7280", textAlign: "center", padding: "2rem", fontSize: "0.875rem" }}>
-                YouTube analytics will appear here once you publish content
-              </p>
-            </div>
-          ) : (
-            <div style={{ textAlign: "center", padding: "3rem" }}>
-              <p style={{ color: "#6b7280", marginBottom: "1rem" }}>YouTube not connected</p>
-              <a href="/social" style={{ color: "#2563eb", fontWeight: 600 }}>Connect YouTube →</a>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {activeTab === "linkedin" && (
-        <Card title="LinkedIn Content">
-          {linkedin.connected ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "1rem", background: "#f0f7ff", borderRadius: "0.5rem" }}>
-                <div style={{ width: "48px", height: "48px", borderRadius: "0.5rem", background: "#0a66c2", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: "1.25rem" }}>
-                  in
-                </div>
-                <div>
-                  <p style={{ fontWeight: 600, margin: 0 }}>{linkedin.name}</p>
-                  <a href={linkedin.url} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb", fontSize: "0.875rem" }}>View Profile</a>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Posts</p>
-                </div>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Impressions</p>
-                </div>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Engagement</p>
-                </div>
-              </div>
-
-              <p style={{ color: "#6b7280", textAlign: "center", padding: "2rem", fontSize: "0.875rem" }}>
-                LinkedIn analytics will appear here once you publish content
-              </p>
-            </div>
-          ) : (
-            <div style={{ textAlign: "center", padding: "3rem" }}>
-              <p style={{ color: "#6b7280", marginBottom: "1rem" }}>LinkedIn not connected</p>
-              <a href="/social" style={{ color: "#2563eb", fontWeight: 600 }}>Connect LinkedIn →</a>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {activeTab === "github" && (
-        <Card title="GitHub Activity">
-          {github.connected ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "1rem", background: "#f6f8fa", borderRadius: "0.5rem" }}>
-                <div style={{ width: "48px", height: "48px", borderRadius: "0.5rem", background: "#24292e", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700 }}>
-                  GH
-                </div>
-                <div>
-                  <p style={{ fontWeight: 600, margin: 0 }}>{github.name}</p>
-                  <a href={github.url} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb", fontSize: "0.875rem" }}>View Profile</a>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Repos</p>
-                </div>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Stars</p>
-                </div>
-                <div style={{ textAlign: "center", padding: "1rem", background: "#f9fafb", borderRadius: "0.5rem" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", margin: 0 }}>0</p>
-                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: 0 }}>Contributions</p>
-                </div>
-              </div>
-
-              <p style={{ color: "#6b7280", textAlign: "center", padding: "2rem", fontSize: "0.875rem" }}>
-                GitHub activity will appear here
-              </p>
-            </div>
-          ) : (
-            <div style={{ textAlign: "center", padding: "3rem" }}>
-              <p style={{ color: "#6b7280", marginBottom: "1rem" }}>GitHub not connected</p>
-              <a href="/social" style={{ color: "#2563eb", fontWeight: 600 }}>Connect GitHub →</a>
-            </div>
-          )}
-        </Card>
+      {["youtube", "linkedin", "github"].includes(activeTab) && (
+        <PlatformPanel
+          platformId={activeTab}
+          stats={getPlatformStats(activeTab)}
+        />
       )}
     </div>
+  );
+}
+
+function PlatformPanel({ platformId, stats }) {
+  const brand = platformBrand(platformId);
+  const actionLabel = platformId === "youtube" ? "View Channel" : "View Profile";
+  const connectLabel = `Connect ${brand.label} →`;
+  if (!stats.connected) {
+    return (
+      <Card title={`${brand.label} Content`}>
+        <div className="analytics-empty">
+          <div className="analytics-empty-icon" aria-hidden="true">{brand.icon}</div>
+          <h3>{brand.label} not connected</h3>
+          <p>Connect your {brand.label} account to see analytics here.</p>
+          <a href="/social" className="analytics-connect-link">{connectLabel}</a>
+        </div>
+      </Card>
+    );
+  }
+  return (
+    <Card title={`${brand.label} Content`}>
+      <div className="analytics-account-head">
+        <span className="analytics-platform-icon lg" style={{ background: brand.iconBg }} aria-hidden="true">
+          {brand.icon}
+        </span>
+        <div>
+          <p className="analytics-account-name">{stats.name}</p>
+          {stats.url && (
+            <a href={stats.url} target="_blank" rel="noopener noreferrer" className="analytics-account-link">
+              {actionLabel}
+            </a>
+          )}
+        </div>
+        <span className="analytics-connection on">
+          <span aria-hidden="true">●</span> Connected
+        </span>
+      </div>
+      <div className="analytics-empty slim">
+        <h3>Analytics coming soon</h3>
+        <p>{brand.label} analytics will appear here once you publish content.</p>
+      </div>
+    </Card>
   );
 }
 

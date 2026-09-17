@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { interviewService } from "../services";
 import Card from "../components/common/Card";
 import Loading from "../components/common/Loading";
@@ -9,28 +9,46 @@ function Interview() {
   const [activeTab, setActiveTab] = useState("practice");
 
   const tabs = [
-    { id: "practice", label: "Mock Interview", icon: "🎙" },
-    { id: "selfintro", label: "Self Introduction", icon: "👋" },
-    { id: "star", label: "STAR Stories", icon: "⭐" },
-    { id: "history", label: "History", icon: "📋" },
+    { id: "practice", label: "Mock Interview", icon: "🎙", desc: "Practice with live feedback" },
+    { id: "selfintro", label: "Self Introduction", icon: "👋", desc: "Templates & coaching" },
+    { id: "star", label: "STAR Stories", icon: "⭐", desc: "Structured story builder" },
+    { id: "history", label: "History", icon: "📋", desc: "Past sessions & scores" },
   ];
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1>Interview Intelligence</h1>
-        <p>Practice interviews, master the STAR method, and polish your self-introduction</p>
+    <div className="page interview-page">
+      {/* Header */}
+      <div className="interview-head">
+        <div className="interview-head-text">
+          <h1>Interview Intelligence</h1>
+          <p>Practice interviews, master the STAR method, and polish your self-introduction.</p>
+        </div>
+        <div className="interview-ai-pill" title="Interview feedback is generated from your answers">
+          <span className="interview-ai-dot" aria-hidden="true" />
+          <span className="interview-ai-text">
+            <strong>AI interview coach</strong>
+            <small>Practice · feedback · review</small>
+          </span>
+        </div>
       </div>
 
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex gap-1 -mb-px overflow-x-auto">
-          {tabs.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}>
-              <span className="mr-1">{tab.icon}</span>{tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+      {/* Navigation cards */}
+      <nav className="interview-nav" aria-label="Interview sections">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            aria-pressed={activeTab === tab.id}
+            className={`interview-navcard ${activeTab === tab.id ? "active" : ""}`}
+          >
+            <span className="interview-navicon" aria-hidden="true">{tab.icon}</span>
+            <span className="interview-navtext">
+              <strong>{tab.label}</strong>
+              <small>{tab.desc}</small>
+            </span>
+          </button>
+        ))}
+      </nav>
 
       {activeTab === "practice" && <MockInterviewTab />}
       {activeTab === "selfintro" && <SelfIntroTab />}
@@ -42,7 +60,7 @@ function Interview() {
 
 /* ============================================
    Mock Interview Tab
-============================================ */
+   ============================================ */
 
 function MockInterviewTab() {
   const [phase, setPhase] = useState("setup");
@@ -118,31 +136,45 @@ function MockInterviewTab() {
 
   if (phase === "setup") {
     return (
-      <div className="space-y-6">
+      <div className="interview-stack">
         {error && <ErrorMessage message={error} />}
         <Card title="Start a Mock Interview">
-          <p className="text-sm text-gray-600 mb-4">Practice answering interview questions and get instant feedback on your content, communication, confidence, structure, and clarity.</p>
-          <form onSubmit={handleStart} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Target Role *</label><input type="text" required value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. Software Engineer" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Target Company</label><input type="text" value={form.target_company} onChange={(e) => setForm({ ...form, target_company: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. Google" /></div>
+          <p className="interview-card-sub">Practice answering interview questions and get instant feedback on your content, communication, confidence, structure, and clarity.</p>
+          <form onSubmit={handleStart} className="interview-form">
+            <div className="interview-field-grid cols-2">
+              <label className="interview-field">
+                <span className="interview-field-label">Target Role *</span>
+                <input type="text" required value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })} placeholder="e.g. Software Engineer" />
+              </label>
+              <label className="interview-field">
+                <span className="interview-field-label">Target Company</span>
+                <input type="text" value={form.target_company} onChange={(e) => setForm({ ...form, target_company: e.target.value })} placeholder="e.g. Google" />
+              </label>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Interview Type</label><select value={form.interview_type} onChange={(e) => setForm({ ...form, interview_type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="behavioral">Behavioral</option><option value="technical">Technical</option><option value="mixed">Mixed</option></select></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Number of Questions</label><input type="number" min="1" max="15" value={form.num_questions} onChange={(e) => setForm({ ...form, num_questions: parseInt(e.target.value) || 5 })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" /></div>
+            <div className="interview-field-grid cols-2">
+              <label className="interview-field">
+                <span className="interview-field-label">Interview Type</span>
+                <select value={form.interview_type} onChange={(e) => setForm({ ...form, interview_type: e.target.value })}><option value="behavioral">Behavioral</option><option value="technical">Technical</option><option value="mixed">Mixed</option></select>
+              </label>
+              <label className="interview-field">
+                <span className="interview-field-label">Number of Questions</span>
+                <input type="number" min="1" max="15" value={form.num_questions} onChange={(e) => setForm({ ...form, num_questions: parseInt(e.target.value) || 5 })} />
+              </label>
             </div>
-            <Button type="submit">Start Interview</Button>
+            <div className="interview-actions-row">
+              <Button type="submit">▶ Start Interview</Button>
+            </div>
           </form>
         </Card>
 
         {/* STAR Method Guide */}
         <Card title="STAR Method Guide">
-          <p className="text-sm text-gray-600 mb-4">Use the STAR method to structure your answers for behavioral questions:</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg"><p className="text-2xl font-bold text-blue-700">S</p><p className="text-sm font-medium text-gray-900 mt-1">Situation</p><p className="text-xs text-gray-500 mt-0.5">Set the scene</p></div>
-            <div className="text-center p-4 bg-green-50 rounded-lg"><p className="text-2xl font-bold text-green-700">T</p><p className="text-sm font-medium text-gray-900 mt-1">Task</p><p className="text-xs text-gray-500 mt-0.5">Your responsibility</p></div>
-            <div className="text-center p-4 bg-yellow-50 rounded-lg"><p className="text-2xl font-bold text-yellow-700">A</p><p className="text-sm font-medium text-gray-900 mt-1">Action</p><p className="text-xs text-gray-500 mt-0.5">What you did</p></div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg"><p className="text-2xl font-bold text-purple-700">R</p><p className="text-sm font-medium text-gray-900 mt-1">Result</p><p className="text-xs text-gray-500 mt-0.5">The outcome</p></div>
+          <p className="interview-card-sub">Use the STAR method to structure your answers for behavioral questions:</p>
+          <div className="interview-star-grid">
+            <div className="interview-star-cell blue"><p className="interview-star-letter">S</p><p className="interview-star-name">Situation</p><p className="interview-star-desc">Set the scene</p></div>
+            <div className="interview-star-cell green"><p className="interview-star-letter">T</p><p className="interview-star-name">Task</p><p className="interview-star-desc">Your responsibility</p></div>
+            <div className="interview-star-cell amber"><p className="interview-star-letter">A</p><p className="interview-star-name">Action</p><p className="interview-star-desc">What you did</p></div>
+            <div className="interview-star-cell purple"><p className="interview-star-letter">R</p><p className="interview-star-name">Result</p><p className="interview-star-desc">The outcome</p></div>
           </div>
         </Card>
       </div>
@@ -151,46 +183,47 @@ function MockInterviewTab() {
 
   if (phase === "interview" && session) {
     const question = session.questions[currentQ];
+    const wordCount = answer.split(/\s+/).filter(Boolean).length;
     return (
-      <div className="space-y-6">
+      <div className="interview-stack">
         {error && <ErrorMessage message={error} />}
         {/* Progress */}
         <Card>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-medium text-gray-900">{session.title}</h3>
-            <span className="text-sm text-gray-500">Question {currentQ + 1} of {session.total_questions}</span>
+          <div className="interview-progress-head">
+            <h3>{session.title}</h3>
+            <span className="interview-muted">Question {currentQ + 1} of {session.total_questions}</span>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${((currentQ + 1) / session.total_questions) * 100}%` }} />
+          <div className="interview-bar-track">
+            <div className="interview-bar-fill" style={{ width: `${((currentQ + 1) / session.total_questions) * 100}%` }} />
           </div>
         </Card>
 
         {/* Question */}
         <Card>
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">{question.category}</span>
-              <span className={`px-2 py-0.5 text-xs rounded ${question.difficulty === "hard" ? "bg-red-100 text-red-700" : question.difficulty === "medium" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>{question.difficulty}</span>
+          <div className="interview-question">
+            <div className="interview-chips">
+              <span className="interview-chip chip-blue">{question.category}</span>
+              <span className={`interview-chip ${question.difficulty === "hard" ? "chip-red" : question.difficulty === "medium" ? "chip-amber" : "chip-green"}`}>{question.difficulty}</span>
             </div>
-            <h3 className="text-lg font-medium text-gray-900">{question.question}</h3>
-            {question.tips && <p className="text-sm text-gray-500 mt-2 italic">💡 {question.tips}</p>}
+            <h3 className="interview-question-text">{question.question}</h3>
+            {question.tips && <p className="interview-tip">💡 {question.tips}</p>}
           </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Your Answer</label>
-            <textarea ref={textareaRef} rows={8} value={answer} onChange={(e) => setAnswer(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-y" placeholder="Type your answer here. Use the STAR method for behavioral questions..." />
-            <p className="text-xs text-gray-400 mt-1">{answer.split(/\s+/).filter(Boolean).length} words</p>
-          </div>
+          <label className="interview-field">
+            <span className="interview-field-label">Your Answer</span>
+            <textarea ref={textareaRef} rows={8} value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Type your answer here. Use the STAR method for behavioral questions..." />
+          </label>
+          <p className="interview-wordcount">{wordCount} word{wordCount !== 1 ? "s" : ""}</p>
 
-          <div className="flex gap-3">
-            <Button onClick={handleSubmitAnswer} loading={submitting} disabled={!answer.trim()}>Submit Answer</Button>
+          <div className="interview-actions-row">
+            <Button onClick={handleSubmitAnswer} loading={submitting} disabled={!answer.trim()}>{submitting ? "Evaluating…" : "Submit Answer"}</Button>
           </div>
         </Card>
 
         {/* Evaluation */}
         {evaluation && (
           <Card title="Answer Evaluation">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+            <div className="interview-scores">
               <ScoreCircle label="Overall" score={evaluation.score} />
               <ScoreCircle label="Content" score={evaluation.content_score} />
               <ScoreCircle label="Communication" score={evaluation.communication_score} />
@@ -199,24 +232,26 @@ function MockInterviewTab() {
             </div>
 
             {evaluation.strengths?.length > 0 && (
-              <div className="mb-4"><h4 className="text-sm font-medium text-green-700 mb-2">Strengths</h4><ul className="space-y-1">{evaluation.strengths.map((s, i) => <li key={i} className="text-sm text-gray-700 flex items-start gap-2"><span className="text-green-500">✓</span>{s}</li>)}</ul></div>
+              <div className="interview-feedback-block"><h4 className="good">Strengths</h4><ul className="interview-tick-list">{evaluation.strengths.map((s, i) => <li key={i} className="good"><span aria-hidden="true">✓</span>{s}</li>)}</ul></div>
             )}
             {evaluation.improvements?.length > 0 && (
-              <div className="mb-4"><h4 className="text-sm font-medium text-yellow-700 mb-2">Areas to Improve</h4><ul className="space-y-1">{evaluation.improvements.map((s, i) => <li key={i} className="text-sm text-gray-700 flex items-start gap-2"><span className="text-yellow-500">⚠</span>{s}</li>)}</ul></div>
+              <div className="interview-feedback-block"><h4 className="warn">Areas to Improve</h4><ul className="interview-tick-list">{evaluation.improvements.map((s, i) => <li key={i} className="warn"><span aria-hidden="true">⚠</span>{s}</li>)}</ul></div>
             )}
             {evaluation.mistakes?.length > 0 && (
-              <div className="mb-4"><h4 className="text-sm font-medium text-red-700 mb-2">Mistakes</h4><ul className="space-y-1">{evaluation.mistakes.map((s, i) => <li key={i} className="text-sm text-gray-700 flex items-start gap-2"><span className="text-red-500">✗</span>{s}</li>)}</ul></div>
+              <div className="interview-feedback-block"><h4 className="bad">Mistakes</h4><ul className="interview-tick-list">{evaluation.mistakes.map((s, i) => <li key={i} className="bad"><span aria-hidden="true">✗</span>{s}</li>)}</ul></div>
             )}
             {evaluation.sample_answer && (
-              <div className="p-3 bg-blue-50 rounded-lg mb-4"><h4 className="text-sm font-medium text-blue-700 mb-1">Suggested Structure</h4><p className="text-sm text-gray-700 whitespace-pre-line">{evaluation.sample_answer}</p></div>
+              <div className="interview-sample"><h4>Suggested Structure</h4><p>{evaluation.sample_answer}</p></div>
             )}
-            <p className="text-sm text-gray-600 mb-4">{evaluation.feedback}</p>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            {evaluation.feedback && <p className="interview-feedback-text">{evaluation.feedback}</p>}
+            <div className="interview-inline-meta">
               <span>Uses STAR: {evaluation.uses_star_method ? "✓ Yes" : "✗ No"}</span>
               <span>·</span>
               <span>{evaluation.word_count} words</span>
             </div>
-            <Button className="mt-4" onClick={handleNextQuestion}>{currentQ + 1 < session.total_questions ? "Next Question →" : "See Results"}</Button>
+            <div className="interview-actions-row">
+              <Button onClick={handleNextQuestion}>{currentQ + 1 < session.total_questions ? "Next Question →" : "See Results"}</Button>
+            </div>
           </Card>
         )}
       </div>
@@ -225,26 +260,33 @@ function MockInterviewTab() {
 
   if (phase === "review" && results) {
     return (
-      <div className="space-y-6">
+      <div className="interview-stack">
         <Card title="Interview Complete!">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 mb-3"><span className="text-3xl font-bold text-blue-700">{results.overall_score}</span></div>
-            <p className="text-sm text-gray-500">Overall Score (out of 10)</p>
+          <div className="interview-review-hero">
+            <div className="interview-score-ring">
+              <span className="interview-score-value">{results.overall_score}</span>
+              <span className="interview-score-max">/ 10</span>
+            </div>
+            <div className="interview-review-text">
+              <h3>Overall Score</h3>
+              <p>{results.questions_evaluated} questions answered · {results.duration_minutes} min</p>
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+          <div className="interview-scores">
             <ScoreCircle label="Content" score={results.avg_content_score} />
             <ScoreCircle label="Communication" score={results.avg_communication_score} />
             <ScoreCircle label="Confidence" score={results.avg_confidence_score} />
             <ScoreCircle label="Structure" score={results.avg_structure_score} />
             <ScoreCircle label="Clarity" score={results.avg_clarity_score} />
           </div>
-          <p className="text-sm text-gray-700 mb-4">{results.detailed_feedback}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            {results.strengths?.length > 0 && <div><h4 className="text-sm font-medium text-green-700 mb-2">Strengths</h4><ul className="space-y-1">{results.strengths.map((s, i) => <li key={i} className="text-sm text-gray-700">✓ {s}</li>)}</ul></div>}
-            {results.improvement_areas?.length > 0 && <div><h4 className="text-sm font-medium text-yellow-700 mb-2">Improvement Areas</h4><ul className="space-y-1">{results.improvement_areas.map((s, i) => <li key={i} className="text-sm text-gray-700">⚠ {s}</li>)}</ul></div>}
+          {results.detailed_feedback && <p className="interview-feedback-text">{results.detailed_feedback}</p>}
+          <div className="interview-two-col">
+            {results.strengths?.length > 0 && <div><h4 className="good">Strengths</h4><ul className="interview-tick-list">{results.strengths.map((s, i) => <li key={i} className="good"><span aria-hidden="true">✓</span>{s}</li>)}</ul></div>}
+            {results.improvement_areas?.length > 0 && <div><h4 className="warn">Improvement Areas</h4><ul className="interview-tick-list">{results.improvement_areas.map((s, i) => <li key={i} className="warn"><span aria-hidden="true">⚠</span>{s}</li>)}</ul></div>}
           </div>
-          <p className="text-sm text-gray-500">{results.questions_evaluated} questions answered · {results.duration_minutes} min</p>
-          <Button className="mt-4" onClick={handleRestart}>Start New Interview</Button>
+          <div className="interview-actions-row">
+            <Button onClick={handleRestart}>↺ Start New Interview</Button>
+          </div>
         </Card>
       </div>
     );
@@ -254,18 +296,18 @@ function MockInterviewTab() {
 }
 
 function ScoreCircle({ label, score }) {
-  const color = score >= 7.5 ? "text-green-600" : score >= 5 ? "text-yellow-600" : "text-red-600";
+  const tone = score >= 7.5 ? "good" : score >= 5 ? "warn" : "bad";
   return (
-    <div className="text-center">
-      <div className={`text-2xl font-bold ${color}`}>{score?.toFixed(1) || "-"}</div>
-      <p className="text-xs text-gray-500">{label}</p>
+    <div className="interview-score">
+      <div className={`interview-score-num ${tone}`}>{score?.toFixed(1) || "-"}</div>
+      <p className="interview-score-label">{label}</p>
     </div>
   );
 }
 
 /* ============================================
    Self Introduction Tab
-============================================ */
+   ============================================ */
 
 function SelfIntroTab() {
   const [intros, setIntros] = useState(null);
@@ -294,47 +336,64 @@ function SelfIntroTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="interview-stack">
       {error && <ErrorMessage message={error} />}
       <Card title="Self-Introduction Coach">
-        <p className="text-sm text-gray-600 mb-4">Get personalized self-introduction templates and coaching for your interviews.</p>
-        <form onSubmit={handleGenerate} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Target Role *</label><input type="text" required value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. Software Engineer" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Target Company</label><input type="text" value={form.target_company} onChange={(e) => setForm({ ...form, target_company: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. Google" /></div>
+        <p className="interview-card-sub">Get personalized self-introduction templates and coaching for your interviews.</p>
+        <form onSubmit={handleGenerate} className="interview-form">
+          <div className="interview-field-grid cols-2">
+            <label className="interview-field">
+              <span className="interview-field-label">Target Role *</span>
+              <input type="text" required value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })} placeholder="e.g. Software Engineer" />
+            </label>
+            <label className="interview-field">
+              <span className="interview-field-label">Target Company</span>
+              <input type="text" value={form.target_company} onChange={(e) => setForm({ ...form, target_company: e.target.value })} placeholder="e.g. Google" />
+            </label>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Years of Experience</label><input type="number" min="0" max="50" value={form.experience_years} onChange={(e) => setForm({ ...form, experience_years: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Key Skills (comma separated)</label><input type="text" value={form.key_skills} onChange={(e) => setForm({ ...form, key_skills: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. React, Python, System Design" /></div>
+          <div className="interview-field-grid cols-2">
+            <label className="interview-field">
+              <span className="interview-field-label">Years of Experience</span>
+              <input type="number" min="0" max="50" value={form.experience_years} onChange={(e) => setForm({ ...form, experience_years: parseInt(e.target.value) || 0 })} />
+            </label>
+            <label className="interview-field">
+              <span className="interview-field-label">Key Skills (comma separated)</span>
+              <input type="text" value={form.key_skills} onChange={(e) => setForm({ ...form, key_skills: e.target.value })} placeholder="e.g. React, Python, System Design" />
+            </label>
           </div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Notable Achievements (comma separated)</label><input type="text" value={form.notable_achievements} onChange={(e) => setForm({ ...form, notable_achievements: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. Led team of 5, Increased revenue by 30%" /></div>
-          <Button type="submit" loading={loading}>Generate Introductions</Button>
+          <label className="interview-field">
+            <span className="interview-field-label">Notable Achievements (comma separated)</span>
+            <input type="text" value={form.notable_achievements} onChange={(e) => setForm({ ...form, notable_achievements: e.target.value })} placeholder="e.g. Led team of 5, Increased revenue by 30%" />
+          </label>
+          <div className="interview-actions-row">
+            <Button type="submit" loading={loading}>{loading ? "Generating…" : "Generate Introductions"}</Button>
+          </div>
         </form>
       </Card>
 
       {intros && (
-        <div className="space-y-6">
+        <div className="interview-stack">
           {intros.introductions?.map((intro, i) => (
             <Card key={i} title={intro.label}>
-              <p className="text-sm text-gray-700 leading-relaxed">{intro.content}</p>
+              <p className="interview-body-text">{intro.content}</p>
             </Card>
           ))}
 
           {intros.structure_guide && (
             <Card title="Structure Guide">
-              <p className="text-sm text-gray-700 whitespace-pre-line">{intros.structure_guide}</p>
+              <p className="interview-preline">{intros.structure_guide}</p>
             </Card>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="interview-two-col">
             {intros.tips?.length > 0 && (
               <Card title="Tips">
-                <ul className="space-y-2">{intros.tips.map((tip, i) => <li key={i} className="flex items-start gap-2 text-sm text-gray-700"><span className="text-blue-500 mt-0.5">💡</span>{tip}</li>)}</ul>
+                <ul className="interview-tick-list">{intros.tips.map((tip, i) => <li key={i} className="info"><span aria-hidden="true">💡</span>{tip}</li>)}</ul>
               </Card>
             )}
             {intros.common_mistakes?.length > 0 && (
               <Card title="Common Mistakes">
-                <ul className="space-y-2">{intros.common_mistakes.map((m, i) => <li key={i} className="flex items-start gap-2 text-sm text-gray-700"><span className="text-red-500 mt-0.5">✗</span>{m}</li>)}</ul>
+                <ul className="interview-tick-list">{intros.common_mistakes.map((m, i) => <li key={i} className="bad"><span aria-hidden="true">✗</span>{m}</li>)}</ul>
               </Card>
             )}
           </div>
@@ -346,7 +405,7 @@ function SelfIntroTab() {
 
 /* ============================================
    STAR Stories Tab
-============================================ */
+   ============================================ */
 
 function STARStoriesTab() {
   const [stories, setStories] = useState(null);
@@ -373,39 +432,55 @@ function STARStoriesTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="interview-stack">
       {error && <ErrorMessage message={error} />}
       <Card title="STAR Story Generator">
-        <p className="text-sm text-gray-600 mb-4">Describe your experiences and we'll generate structured STAR stories you can use in interviews.</p>
-        <form onSubmit={handleGenerate} className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Describe Your Experiences *</label><textarea required rows={4} value={form.experience_description} onChange={(e) => setForm({ ...form, experience_description: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-y" placeholder="Describe your key professional experiences, challenges you've faced, and achievements. Separate different experiences with periods or new lines..." /></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Target Role</label><input type="text" value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g. Senior Engineer" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Number of Stories</label><input type="number" min="1" max="10" value={form.num_stories} onChange={(e) => setForm({ ...form, num_stories: parseInt(e.target.value) || 3 })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" /></div>
+        <p className="interview-card-sub">Describe your experiences and we&apos;ll generate structured STAR stories you can use in interviews.</p>
+        <form onSubmit={handleGenerate} className="interview-form">
+          <label className="interview-field">
+            <span className="interview-field-label">Describe Your Experiences *</span>
+            <textarea required rows={4} value={form.experience_description} onChange={(e) => setForm({ ...form, experience_description: e.target.value })} placeholder="Describe your key professional experiences, challenges you've faced, and achievements. Separate different experiences with periods or new lines..." />
+          </label>
+          <div className="interview-field-grid cols-2">
+            <label className="interview-field">
+              <span className="interview-field-label">Target Role</span>
+              <input type="text" value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })} placeholder="e.g. Senior Engineer" />
+            </label>
+            <label className="interview-field">
+              <span className="interview-field-label">Number of Stories</span>
+              <input type="number" min="1" max="10" value={form.num_stories} onChange={(e) => setForm({ ...form, num_stories: parseInt(e.target.value) || 3 })} />
+            </label>
           </div>
-          <Button type="submit" loading={loading}>Generate Stories</Button>
+          <div className="interview-actions-row">
+            <Button type="submit" loading={loading}>{loading ? "Generating…" : "Generate Stories"}</Button>
+          </div>
         </form>
       </Card>
 
       {stories && (
-        <div className="space-y-6">
+        <div className="interview-stack">
           {stories.stories?.map((story, i) => (
-            <Card key={i} title={`Story ${i + 1}`}>
-              <div className="space-y-3">
-                <div className="p-3 bg-blue-50 rounded-lg"><p className="text-xs font-medium text-blue-700 mb-1">Situation</p><p className="text-sm text-gray-700">{story.situation}</p></div>
-                <div className="p-3 bg-green-50 rounded-lg"><p className="text-xs font-medium text-green-700 mb-1">Task</p><p className="text-sm text-gray-700">{story.task}</p></div>
-                <div className="p-3 bg-yellow-50 rounded-lg"><p className="text-xs font-medium text-yellow-700 mb-1">Action</p><p className="text-sm text-gray-700">{story.action}</p></div>
-                <div className="p-3 bg-purple-50 rounded-lg"><p className="text-xs font-medium text-purple-700 mb-1">Result</p><p className="text-sm text-gray-700">{story.result}</p></div>
+            <Card key={i} title={`Story ${i + 1}${story.title ? ` — ${story.title}` : ""}`}>
+              <div className="interview-star-story">
+                <div className="interview-star-block blue"><p className="interview-star-block-label">Situation</p><p>{story.situation}</p></div>
+                <div className="interview-star-block green"><p className="interview-star-block-label">Task</p><p>{story.task}</p></div>
+                <div className="interview-star-block amber"><p className="interview-star-block-label">Action</p><p>{story.action}</p></div>
+                <div className="interview-star-block purple"><p className="interview-star-block-label">Result</p><p>{story.result}</p></div>
               </div>
               {story.applicable_questions?.length > 0 && (
-                <div className="mt-3"><p className="text-xs text-gray-500 mb-1">Applicable to:</p><div className="flex flex-wrap gap-1">{story.applicable_questions.map((q, j) => <span key={j} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">{q}</span>)}</div></div>
+                <div className="interview-applicable">
+                  <p className="interview-muted">Applicable to:</p>
+                  <div className="interview-chips">
+                    {story.applicable_questions.map((q, j) => <span key={j} className="interview-chip">{q}</span>)}
+                  </div>
+                </div>
               )}
             </Card>
           ))}
 
           {stories.tips?.length > 0 && (
             <Card title="STAR Story Tips">
-              <ul className="space-y-2">{stories.tips.map((tip, i) => <li key={i} className="flex items-start gap-2 text-sm text-gray-700"><span className="text-blue-500 mt-0.5">💡</span>{tip}</li>)}</ul>
+              <ul className="interview-tick-list">{stories.tips.map((tip, i) => <li key={i} className="info"><span aria-hidden="true">💡</span>{tip}</li>)}</ul>
             </Card>
           )}
         </div>
@@ -416,7 +491,7 @@ function STARStoriesTab() {
 
 /* ============================================
    Interview History Tab
-============================================ */
+   ============================================ */
 
 function InterviewHistoryTab() {
   const [interviews, setInterviews] = useState([]);
@@ -463,37 +538,48 @@ function InterviewHistoryTab() {
   const inProgress = interviews.filter(i => i.status === "in_progress");
 
   return (
-    <div className="space-y-6">
+    <div className="interview-stack">
       {error && <ErrorMessage message={error} />}
 
       {inProgress.length > 0 && (
         <Card title="In Progress">
-          <div className="space-y-2">{inProgress.map(i => (
-            <div key={i.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-              <div><p className="font-medium text-gray-900">{i.title}</p><p className="text-xs text-gray-500">{i.questions_count} questions · {i.interview_type}</p></div>
-              <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded">In Progress</span>
-            </div>
-          ))}</div>
+          <div className="interview-history-list">
+            {inProgress.map(i => (
+              <div key={i.id} className="interview-history-row progress">
+                <div className="interview-history-main">
+                  <p className="interview-history-title">{i.title}</p>
+                  <p className="interview-muted">{i.questions_count} questions · {i.interview_type}</p>
+                </div>
+                <span className="interview-status-pill progress">In Progress</span>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
       <Card title="Completed Interviews">
         {completed.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No completed interviews yet. Start a mock interview to see your history here.</p>
+          <div className="interview-empty slim">
+            <h3>No history yet</h3>
+            <p>No completed interviews yet. Start a mock interview to see your history here.</p>
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="interview-history-list">
             {completed.map(i => (
-              <div key={i.id} className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedId === i.id ? "border-blue-300 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`} onClick={() => loadDetail(i.id)}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-gray-900">{i.title}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">{i.questions_count} questions · {i.duration_minutes || "?"} min</p>
-                  </div>
-                  <div className="text-right">
-                    {i.overall_score !== null && <p className={`text-lg font-bold ${i.overall_score >= 7.5 ? "text-green-600" : i.overall_score >= 5 ? "text-yellow-600" : "text-red-600"}`}>{i.overall_score}</p>}
-                  </div>
-                </div>
-              </div>
+              <button
+                key={i.id}
+                onClick={() => loadDetail(i.id)}
+                aria-pressed={selectedId === i.id}
+                className={`interview-history-row clickable ${selectedId === i.id ? "selected" : ""}`}
+              >
+                <span className="interview-history-main">
+                  <span className="interview-history-title">{i.title}</span>
+                  <span className="interview-muted">{i.questions_count} questions · {i.duration_minutes || "?"} min</span>
+                </span>
+                {i.overall_score !== null && i.overall_score !== undefined && (
+                  <span className={`interview-history-score ${i.overall_score >= 7.5 ? "good" : i.overall_score >= 5 ? "warn" : "bad"}`}>{i.overall_score}</span>
+                )}
+              </button>
             ))}
           </div>
         )}
@@ -503,32 +589,40 @@ function InterviewHistoryTab() {
 
       {detail && !detailLoading && (
         <Card title={detail.title}>
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 mb-2"><span className="text-2xl font-bold text-blue-700">{detail.overall_score}</span></div>
-            <p className="text-sm text-gray-500">Overall Score</p>
-            {detail.duration_minutes && <p className="text-xs text-gray-400">{detail.duration_minutes} minutes</p>}
+          <div className="interview-review-hero">
+            <div className="interview-score-ring">
+              <span className="interview-score-value">{detail.overall_score}</span>
+              <span className="interview-score-max">/ 10</span>
+            </div>
+            <div className="interview-review-text">
+              <h3>Overall Score</h3>
+              {detail.duration_minutes && <p>{detail.duration_minutes} minutes</p>}
+            </div>
           </div>
 
-          {detail.feedback && <p className="text-sm text-gray-700 mb-4">{detail.feedback}</p>}
+          {detail.feedback && <p className="interview-feedback-text">{detail.feedback}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            {detail.strengths?.length > 0 && <div><h4 className="text-sm font-medium text-green-700 mb-2">Strengths</h4><ul className="space-y-1">{detail.strengths.map((s, i) => <li key={i} className="text-sm text-gray-700">✓ {s}</li>)}</ul></div>}
-            {detail.improvement_areas?.length > 0 && <div><h4 className="text-sm font-medium text-yellow-700 mb-2">Improvement Areas</h4><ul className="space-y-1">{detail.improvement_areas.map((s, i) => <li key={i} className="text-sm text-gray-700">⚠ {s}</li>)}</ul></div>}
+          <div className="interview-two-col">
+            {detail.strengths?.length > 0 && <div><h4 className="good">Strengths</h4><ul className="interview-tick-list">{detail.strengths.map((s, i) => <li key={i} className="good"><span aria-hidden="true">✓</span>{s}</li>)}</ul></div>}
+            {detail.improvement_areas?.length > 0 && <div><h4 className="warn">Improvement Areas</h4><ul className="interview-tick-list">{detail.improvement_areas.map((s, i) => <li key={i} className="warn"><span aria-hidden="true">⚠</span>{s}</li>)}</ul></div>}
           </div>
 
           {detail.evaluations?.length > 0 && (
-            <div><h4 className="text-sm font-medium text-gray-900 mb-3">Question Breakdown</h4>
-              <div className="space-y-3">{detail.evaluations.map((ev, i) => (
-                <div key={i} className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900 mb-1">{detail.questions?.[i]?.question || `Question ${i + 1}`}</p>
-                  <div className="flex gap-4 text-xs text-gray-500">
-                    <span>Score: {ev.score}/10</span>
-                    <span>Content: {ev.content_score}</span>
-                    <span>Structure: {ev.structure_score}</span>
-                    <span>STAR: {ev.uses_star_method ? "✓" : "✗"}</span>
+            <div>
+              <p className="interview-section-label">Question Breakdown</p>
+              <div className="interview-breakdown">
+                {detail.evaluations.map((ev, i) => (
+                  <div key={i} className="interview-breakdown-row">
+                    <p className="interview-breakdown-q">{detail.questions?.[i]?.question || `Question ${i + 1}`}</p>
+                    <div className="interview-breakdown-meta">
+                      <span>Score: {ev.score}/10</span>
+                      <span>Content: {ev.content_score}</span>
+                      <span>Structure: {ev.structure_score}</span>
+                      <span>STAR: {ev.uses_star_method ? "✓" : "✗"}</span>
+                    </div>
                   </div>
-                </div>
-              ))}</div>
+                ))}
+              </div>
             </div>
           )}
         </Card>

@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +18,9 @@ class Settings(BaseSettings):
     )
 
     SECRET_KEY: str = "development-secret-key"
+
+    # Comma-separated emails auto-granted admin on first use (bootstrap only).
+    ADMIN_EMAILS: str = ""
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
@@ -124,6 +128,24 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def _fail_closed_secrets(self):
+        if self.APP_ENV == "production" and self.SECRET_KEY in (
+            "",
+            "development-secret-key",
+        ):
+            raise ValueError(
+                "SECRET_KEY must be set to a strong value when APP_ENV=production"
+            )
+        return self
+
+    def admin_emails(self) -> set:
+        return {
+            email.strip().lower()
+            for email in self.ADMIN_EMAILS.split(",")
+            if email.strip()
+        }
 
 
 settings = Settings()

@@ -96,30 +96,36 @@ function Research() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Multi-Agent Research</h1>
-          <p className="text-gray-600 mt-2">Conduct deep, evidence-backed research with AI agents</p>
-        </div>
+    <div className="research-page">
+      <div className="research-page-inner">
+        <header className="research-page-header">
+          <div className="research-header-copy">
+            <span className="research-eyebrow">CareerIntel AI · Research Studio</span>
+            <h1>Multi-Agent Research</h1>
+            <p>Conduct deep, evidence-backed research with coordinated AI agents.</p>
+          </div>
+          <div className="research-header-visual" aria-hidden="true">
+            <span className="research-header-orbit orbit-one" />
+            <span className="research-header-orbit orbit-two" />
+            <span className="research-header-icon">⌘</span>
+          </div>
+        </header>
 
-        {error && <ErrorMessage message={error} onDismiss={() => setError("")} />}
+        {error && <div className="research-feedback" role="alert"><ErrorMessage message={error} /></div>}
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="research-workspace">
           {/* Tabs */}
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px" aria-label="Tabs">
+          <div className="research-tabs-wrap">
+            <nav className="research-tabs" aria-label="Research workspace sections" role="tablist">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => { setActiveTab(tab.id); setShowDetail(false); }}
-                  className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? "border-blue-500 text-blue-600 bg-blue-50"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  }`}
+                  className={`research-tab ${activeTab === tab.id ? "active" : ""}`}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
                 >
-                  <span className="mr-2">{tab.icon}</span>
+                  <span className="research-tab-icon" aria-hidden="true">{tab.icon}</span>
                   {tab.label}
                 </button>
               ))}
@@ -127,41 +133,51 @@ function Research() {
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
+          <div className="research-workspace-content">
             {/* New Research Tab */}
             {activeTab === "new" && (
-              <div className="max-w-3xl mx-auto">
-                <Card className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Start New Research</h2>
-                  <p className="text-gray-600 mb-6">
-                    Enter your research question and our multi-agent system will gather evidence, verify claims, and generate a comprehensive report.
-                  </p>
-                  
-                  <form onSubmit={startResearch} className="space-y-6">
+              <div className="research-form-layout">
+                <Card className="research-form-card">
+                  <div className="research-form-intro">
+                    <span className="research-form-icon" aria-hidden="true">✦</span>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Research Question <span className="text-red-500">*</span>
-                      </label>
+                      <h2>Start New Research</h2>
+                      <p>Enter your question and our multi-agent system will gather evidence, verify claims, and generate a comprehensive report.</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={startResearch} className="research-form">
+                    <div className="research-field research-question-field">
+                      <div className="research-field-heading">
+                        <label htmlFor="research-question">Research Question <span aria-hidden="true">*</span></label>
+                        <span className="research-required-note">Required</span>
+                      </div>
+                      <p id="research-question-help" className="research-field-help">
+                        Ask a focused question to help agents gather the most relevant evidence.
+                      </p>
                       <Textarea
+                        id="research-question"
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         placeholder="What would you like to research? Be specific for better results..."
                         rows={4}
                         required
-                        className="w-full"
+                        aria-describedby="research-question-help research-question-example"
+                        className="research-question-input"
                       />
-                      <p className="text-sm text-gray-500 mt-1">
-                        Example: "What are the emerging trends in AI-assisted software development for 2024?"
+                      <p id="research-question-example" className="research-example">
+                        <span aria-hidden="true">✦</span> Example: “What are the emerging trends in AI-assisted software development?”
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Research Type</label>
+                    <div className="research-field-grid">
+                      <div className="research-field">
+                        <label htmlFor="research-type">Research Type</label>
                         <select
+                          id="research-type"
                           value={researchType}
                           onChange={e => setResearchType(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="research-select"
                         >
                           <option value="general">General</option>
                           <option value="job_market">Job Market Analysis</option>
@@ -171,46 +187,48 @@ function Research() {
                           <option value="skill_analysis">Skill Gap Analysis</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Max Sources</label>
+                      <div className="research-field">
+                        <label htmlFor="research-max-sources">Max Sources</label>
                         <input
+                          id="research-max-sources"
                           type="number"
                           value={maxSources}
                           onChange={e => setMaxSources(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
                           min="1"
                           max="50"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="research-input"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Timeout (seconds)</label>
+                    <div className="research-field-grid research-settings-grid">
+                      <div className="research-field">
+                        <label htmlFor="research-timeout">Timeout <span className="research-label-detail">(seconds)</span></label>
                         <input
+                          id="research-timeout"
                           type="number"
                           value={timeoutSeconds}
                           onChange={e => setTimeoutSeconds(Math.min(1800, Math.max(30, parseInt(e.target.value) || 30)))}
                           min="30"
                           max="1800"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="research-input"
                         />
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
+                    <div className="research-form-actions">
                       <Button type="button" variant="secondary" onClick={() => setQuery("")}>
                         Clear
                       </Button>
-                      <Button type="submit" loading={loading} className="w-full md:w-auto">
-                        Start Research
+                      <Button type="submit" loading={loading}>
+                        <span aria-hidden="true">✦</span> Start Research
                       </Button>
                     </div>
                   </form>
                 </Card>
 
                 {/* Research Types Info */}
-                <div className="mt-8 grid gap-4 md:grid-cols-3">
+                <div className="research-type-cards">
                   {[
                     { title: "General", desc: "Broad research on any topic with comprehensive evidence gathering" },
                     { title: "Job Market", desc: "Analyze job market trends, salary data, and hiring patterns" },
@@ -219,9 +237,9 @@ function Research() {
                     { title: "Career Path", desc: "Map career progression paths, required skills, and transitions" },
                     { title: "Skill Analysis", desc: "Identify skill gaps and learning priorities for target roles" },
                   ].map((item, i) => (
-                    <Card key={i} className="p-4 hover:shadow-md transition-shadow">
-                      <h3 className="font-medium text-gray-900 mb-1">{item.title}</h3>
-                      <p className="text-sm text-gray-600">{item.desc}</p>
+                    <Card key={i} className="research-type-card">
+                      <h3>{item.title}</h3>
+                      <p>{item.desc}</p>
                     </Card>
                   ))}
                 </div>
@@ -230,32 +248,35 @@ function Research() {
 
             {/* Projects Tab */}
             {activeTab === "projects" && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-medium text-gray-900">Research Projects</h2>
+              <div className="research-projects-view">
+                <div className="research-projects-heading">
+                  <div>
+                    <span className="research-section-eyebrow">Workspace</span>
+                    <h2>My Research Projects</h2>
+                  </div>
                   <Button onClick={() => setActiveTab("new")} variant="primary">
-                    New Research
+                    <span aria-hidden="true">✦</span> New Research
                   </Button>
                 </div>
 
                 {loading && researchList.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="research-projects-loading">
                     <Loading />
                   </div>
                 ) : null}
 
                 {researchList.length === 0 && !loading && (
-                  <Card className="p-8 text-center">
-                    <div className="text-4xl mb-4">🔬</div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No research projects yet</h3>
-                    <p className="text-gray-500 mb-6">Start your first research project to see it here</p>
-                    <Button onClick={() => setActiveTab("new")} variant="primary" className="w-full md:w-auto">
-                      Start Research
+                  <Card className="research-empty-state">
+                    <div className="research-empty-icon" aria-hidden="true">⌘</div>
+                    <h3>No research projects yet</h3>
+                    <p>Turn a career question into an evidence-backed brief with your AI research team.</p>
+                    <Button onClick={() => setActiveTab("new")} variant="primary">
+                      <span aria-hidden="true">✦</span> Start Your First Research
                     </Button>
                   </Card>
                 )}
 
-                <div className="space-y-4">
+                <div className="research-project-list">
                   {researchList.map(research => (
                     <ResearchCard
                       key={research.id}
@@ -283,38 +304,30 @@ function Research() {
 }
 
 function ResearchCard({ research, onView, onCancel }) {
-  const statusColors = {
-    completed: "bg-green-100 text-green-800",
-    failed: "bg-red-100 text-red-800",
-    researching: "bg-blue-100 text-blue-800",
-    planning: "bg-yellow-100 text-yellow-800",
-    created: "bg-gray-100 text-gray-800",
-  };
-
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="font-medium text-gray-900 truncate">{research.query}</h3>
-            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[research.status] || "bg-gray-100 text-gray-800"}`}>
+    <Card className="research-project-card">
+      <div className="research-project-card-content">
+        <div className="research-project-main">
+          <div className="research-project-title-row">
+            <h3>{research.query}</h3>
+            <span className={`research-status status-${research.status}`}>
               {research.status}
             </span>
           </div>
-          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1">📋 {research.research_type}</span>
-            <span className="flex items-center gap-1">📚 {research.source_count || 0} sources</span>
-            <span className="flex items-center gap-1">✅ {research.verified_claim_count || 0} verified</span>
+          <div className="research-project-meta">
+            <span><i aria-hidden="true">▦</i> {research.research_type}</span>
+            <span><i aria-hidden="true">◫</i> {research.source_count || 0} sources</span>
+            <span><i aria-hidden="true">✓</i> {research.verified_claim_count || 0} verified</span>
             {research.confidence_score && (
-              <span className="flex items-center gap-1">🎯 {(research.confidence_score * 100).toFixed(0)}% confidence</span>
+              <span><i aria-hidden="true">◎</i> {(research.confidence_score * 100).toFixed(0)}% confidence</span>
             )}
           </div>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="research-project-date">
             Created: {new Date(research.created_at).toLocaleDateString()}
             {research.completed_at && ` • Completed: ${new Date(research.completed_at).toLocaleDateString()}`}
           </p>
         </div>
-        <div className="flex gap-2 ml-4">
+        <div className="research-project-actions">
           <Button onClick={onView} variant="secondary" size="sm">
             {research.status === "completed" ? "View Report" : "View Progress"}
           </Button>

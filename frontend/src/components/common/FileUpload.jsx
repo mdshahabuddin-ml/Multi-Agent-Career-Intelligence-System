@@ -8,18 +8,19 @@ const FileUpload = ({
   maxSize = 10 * 1024 * 1024,
   title = "Upload File",
   description = "",
+  submitLabel = "Upload File",
   className = "",
 }) => {
   const [file, setFile] = useState(null);
   const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
+  const validateAndSet = (selectedFile) => {
     if (!selectedFile) return;
 
     if (selectedFile.size > maxSize) {
-      setError(`File size exceeds ${(maxSize / (1024 * 1024)).toFixed(1)}MB limit`);
+      setError(`File size exceeds ${(maxSize / (1024 * 1024)).toFixed(1)} MB limit`);
       setFile(null);
       return;
     }
@@ -28,22 +29,34 @@ const FileUpload = ({
     setFile(selectedFile);
   };
 
+  const handleFileChange = (e) => {
+    validateAndSet(e.target.files[0]);
+    e.target.value = "";
+  };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!loading) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragging(false);
+    if (loading) return;
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      handleFileChange({ target: { files: [droppedFile] } });
-    }
+    if (droppedFile) validateAndSet(droppedFile);
   };
 
   const handleClick = () => {
-    fileInputRef.current?.click();
+    if (!loading) fileInputRef.current?.click();
   };
 
   const handleSubmit = async (e) => {
@@ -57,64 +70,64 @@ const FileUpload = ({
   };
 
   return (
-    <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${className} ${file ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-blue-500'}`}>
+    <div
+      className={`resume-drop ${file ? "has-file" : ""} ${isDragging ? "dragging" : ""} ${className}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <input
         ref={fileInputRef}
         type="file"
         accept={accept}
         onChange={handleFileChange}
-        className="hidden"
-        id="file-upload"
+        className="resume-drop-input"
         disabled={loading}
+        aria-label={title}
       />
-      <label htmlFor="file-upload" className="cursor-pointer" onClick={handleClick}>
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-blue-100 flex items-center justify-center">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-            {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
-            <p className="text-xs text-gray-400 mt-2">Drag & drop or click to browse</p>
-          </div>
+      <div
+        className="resume-drop-zone"
+        onClick={handleClick}
+        role="button"
+        tabIndex={loading ? -1 : 0}
+        aria-disabled={loading}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleClick(); }}
+      >
+        <div className="resume-drop-icon" aria-hidden="true">⬆</div>
+        <div>
+          <h3>{title}</h3>
+          {description && <p className="resume-drop-desc">{description}</p>}
+          <p className="resume-drop-hint">Drag &amp; drop your file here, or click to browse</p>
         </div>
-      </label>
+      </div>
 
       {file && (
-        <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200 text-left">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p className="font-medium text-green-800">{file.name}</p>
-                <p className="text-sm text-green-600">{(file.size / 1024).toFixed(1)} KB</p>
-              </div>
+        <div className="resume-drop-file">
+          <div className="resume-drop-file-info">
+            <span className="resume-drop-file-icon" aria-hidden="true">✓</span>
+            <div>
+              <p className="resume-drop-file-name">{file.name}</p>
+              <p className="resume-drop-file-size">{(file.size / 1024).toFixed(1)} KB · ready to upload</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setFile(null)}
-              className="text-gray-400 hover:text-red-500 transition-colors"
-              aria-label="Remove file"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setFile(null)}
+            className="resume-iconbtn"
+            aria-label="Remove selected file"
+          >
+            ✕
+          </button>
         </div>
       )}
 
       {error && (
-        <p className="mt-3 text-sm text-red-600" role="alert">{error}</p>
+        <p className="resume-drop-error" role="alert">{error}</p>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-6">
-        <Button type="submit" loading={loading} variant="primary" disabled={!file || loading} className="w-full">
-          {loading ? "Uploading..." : "Upload File"}
+      <form onSubmit={handleSubmit} className="resume-drop-form">
+        <Button type="submit" loading={loading} disabled={!file || loading}>
+          {loading ? "Uploading…" : submitLabel}
         </Button>
       </form>
     </div>

@@ -33,25 +33,31 @@ function AutomationManager() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Automation Manager</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-blue-600">{stats?.total || 0}</p>
-            <p className="text-sm text-gray-500">Total Automations</p>
+      <div className="autom-stat-row">
+        <div className="autom-stat-card">
+          <div className="autom-stat-top">
+            <span className="autom-stat-icon blue" aria-hidden="true">⚙</span>
+            <span className="autom-stat-label">Total Automations</span>
           </div>
-        </Card>
-        <Card>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-green-600">{stats?.enabled || 0}</p>
-            <p className="text-sm text-gray-500">Enabled</p>
+          <p className="autom-stat-value">{stats?.total || 0}</p>
+          <p className="autom-stat-sub">All configured automations</p>
+        </div>
+        <div className="autom-stat-card">
+          <div className="autom-stat-top">
+            <span className="autom-stat-icon green" aria-hidden="true">✓</span>
+            <span className="autom-stat-label">Enabled</span>
           </div>
-        </Card>
-        <Card>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-red-600">{stats?.disabled || 0}</p>
-            <p className="text-sm text-gray-500">Disabled</p>
+          <p className="autom-stat-value">{stats?.enabled || 0}</p>
+          <p className="autom-stat-sub">Currently active</p>
+        </div>
+        <div className="autom-stat-card">
+          <div className="autom-stat-top">
+            <span className="autom-stat-icon muted" aria-hidden="true">⏸</span>
+            <span className="autom-stat-label">Disabled</span>
           </div>
-        </Card>
+          <p className="autom-stat-value">{stats?.disabled || 0}</p>
+          <p className="autom-stat-sub">Currently inactive</p>
+        </div>
       </div>
 
       <Card title="Automations">

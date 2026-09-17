@@ -33,25 +33,31 @@ function HermesDashboard() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Hermes Dashboard</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-blue-600">{agents.length}</p>
-            <p className="text-sm text-gray-500">Active Agents</p>
+      <div className="hermes-stat-row">
+        <div className="hermes-stat-card">
+          <div className="hermes-stat-top">
+            <span className="hermes-stat-icon blue" aria-hidden="true">◉</span>
+            <span className="hermes-stat-label">Active Agents</span>
           </div>
-        </Card>
-        <Card>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-green-600">{stats?.tasks_completed || 0}</p>
-            <p className="text-sm text-gray-500">Tasks Completed</p>
+          <p className="hermes-stat-value">{agents.length}</p>
+          <p className="hermes-stat-sub">Currently active</p>
+        </div>
+        <div className="hermes-stat-card">
+          <div className="hermes-stat-top">
+            <span className="hermes-stat-icon green" aria-hidden="true">✓</span>
+            <span className="hermes-stat-label">Tasks Completed</span>
           </div>
-        </Card>
-        <Card>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-purple-600">{stats?.skills || 0}</p>
-            <p className="text-sm text-gray-500">Skills Available</p>
+          <p className="hermes-stat-value">{stats?.tasks_completed || 0}</p>
+          <p className="hermes-stat-sub">Successfully completed</p>
+        </div>
+        <div className="hermes-stat-card">
+          <div className="hermes-stat-top">
+            <span className="hermes-stat-icon purple" aria-hidden="true">✦</span>
+            <span className="hermes-stat-label">Skills Available</span>
           </div>
-        </Card>
+          <p className="hermes-stat-value">{stats?.skills || 0}</p>
+          <p className="hermes-stat-sub">Registered capabilities</p>
+        </div>
       </div>
 
       <Card title="Registered Agents">

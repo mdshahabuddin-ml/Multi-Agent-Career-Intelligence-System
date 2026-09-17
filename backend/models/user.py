@@ -46,6 +46,12 @@ class User(Base):
         nullable=False,
     )
 
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
     organization_id: Mapped[int | None] = mapped_column(
         ForeignKey("organizations.id"),
         nullable=True,

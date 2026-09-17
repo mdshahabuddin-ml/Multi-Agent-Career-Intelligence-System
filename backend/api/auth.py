@@ -4,7 +4,7 @@ from datetime import datetime
 
 from backend.config import settings
 from backend.database import get_db
-from backend.dependencies import get_current_active_user
+from backend.dependencies import get_current_active_user, get_current_admin_user
 from backend.models import User
 from backend.models.organization import Organization, OrganizationMember, OrganizationPlan, OrganizationStatus
 from backend.schemas.user import Token, UserCreate, UserLogin, UserResponse, UserWithToken

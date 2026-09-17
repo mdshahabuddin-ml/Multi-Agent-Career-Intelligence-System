@@ -24,15 +24,23 @@ class JobListResponse(BaseModel):
     location: Optional[str] = None
     is_remote: bool
     remote_type: Optional[str] = None
+    description: Optional[str] = None
+    requirements: Optional[str] = None
+    responsibilities: Optional[str] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
     salary_yearly_min: Optional[int] = None
     salary_yearly_max: Optional[int] = None
     salary_currency: str
     experience_level: Optional[str] = None
     employment_type: Optional[str] = None
     source: str
+    source_url: Optional[str] = None
+    application_url: Optional[str] = None
     quality_score: float
     posted_date: Optional[datetime] = None
     skills: Optional[List[str]] = None
+    keywords: Optional[List[str]] = None
 
     model_config = {"from_attributes": True}
 

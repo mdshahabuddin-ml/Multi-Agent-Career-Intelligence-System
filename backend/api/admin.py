@@ -31,12 +31,11 @@ def get_org_service(db: Session = Depends(get_db)) -> OrganizationService:
 
 @router.get("/dashboard/stats")
 async def get_admin_stats(
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Get admin dashboard statistics."""
-    # Check if user is super admin (in production, check role)
-    # For now, allow any authenticated user to see stats
+    # Authorization enforced by get_current_admin_user dependency.
     
     total_orgs = billing.db.query(Organization).count()
     active_orgs = billing.db.query(Organization).filter(
@@ -96,7 +95,7 @@ async def admin_list_organizations(
     search: Optional[str] = Query(None),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """List all organizations with filters."""
@@ -139,7 +138,7 @@ async def admin_list_organizations(
 @router.get("/organizations/{org_id}", response_model=dict)
 async def admin_get_organization(
     org_id: int,
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Get detailed organization info."""
@@ -231,7 +230,7 @@ async def admin_get_organization(
 @router.post("/organizations/{org_id}/impersonate")
 async def admin_impersonate_organization(
     org_id: int,
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Allow admin to impersonate organization (for support)."""
@@ -252,7 +251,7 @@ async def admin_impersonate_organization(
 async def admin_change_organization_plan(
     org_id: int,
     plan: str = Query(...),
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Force change organization plan (admin override)."""
@@ -286,7 +285,7 @@ async def admin_change_organization_plan(
 async def admin_extend_trial(
     org_id: int,
     days: int = Query(14, ge=1, le=365),
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Extend organization trial period."""
@@ -309,7 +308,7 @@ async def admin_extend_trial(
 @router.post("/organizations/{org_id}/reset-usage", response_model=dict)
 async def admin_reset_usage(
     org_id: int,
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Reset organization usage counters."""
@@ -325,7 +324,7 @@ async def admin_reset_usage(
 @router.delete("/organizations/{org_id}", status_code=204)
 async def admin_delete_organization(
     org_id: int,
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Force delete organization."""
@@ -340,7 +339,7 @@ async def admin_delete_organization(
 async def get_revenue_report(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Get revenue report."""
@@ -385,7 +384,7 @@ async def get_revenue_report(
 
 @router.get("/reports/mrr")
 async def get_mrr_report(
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Get Monthly Recurring Revenue report."""
@@ -424,7 +423,7 @@ async def get_mrr_report(
 @router.get("/reports/churn")
 async def get_churn_report(
     months: int = Query(6, ge=1, le=24),
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Get churn report."""
@@ -464,7 +463,7 @@ async def get_churn_report(
 
 @router.get("/system/health")
 async def get_system_health(
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Get system health overview."""
@@ -502,7 +501,7 @@ async def get_system_health(
 
 @router.get("/feature-flags", response_model=List[dict])
 async def admin_list_feature_flags(
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """List all feature flags across all organizations."""
@@ -529,7 +528,7 @@ async def admin_list_feature_flags(
 async def admin_toggle_feature_flag(
     flag_key: str,
     enabled: bool = Query(...),
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Toggle global feature flag."""
@@ -558,7 +557,7 @@ async def get_audit_logs(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
     limit: int = Query(100, le=500),
-    current_user = Depends(auth.get_current_active_user),
+    current_user = Depends(auth.get_current_admin_user),
     billing: BillingService = Depends(get_billing),
 ):
     """Get audit logs (placeholder - would integrate with audit service)."""

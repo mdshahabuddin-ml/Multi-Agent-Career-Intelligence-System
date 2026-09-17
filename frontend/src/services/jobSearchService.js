@@ -25,6 +25,11 @@ const jobSearchService = {
         return response.data;
     },
 
+    async listJobs(params = {}, signal) {
+        const response = await api.get("/api/jobs/", { params, signal });
+        return response.data;
+    },
+
     /*
     |--------------------------------------------------------------------------
     | Get Job Recommendations

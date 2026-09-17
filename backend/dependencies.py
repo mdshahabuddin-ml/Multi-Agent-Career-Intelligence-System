@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from backend.config import settings
+from backend.config import settings
 from backend.database import get_db
 from backend.models import User
 from backend.utils.security import decode_token
@@ -43,6 +44,20 @@ def get_current_active_user(
 ) -> User:
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+def get_current_admin_user(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    # Bootstrap path: emails listed in ADMIN_EMAILS are always admins so the
+    # first operator is never locked out. Prefer the is_admin DB flag.
+    if not current_user.is_admin:
+        if current_user.email.lower() not in settings.admin_emails():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin privileges required",
+            )
     return current_user
 
 

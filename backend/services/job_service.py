@@ -3,7 +3,8 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, func
+from sqlalchemy import or_, and_, func, cast, String
+from sqlalchemy.dialects import postgresql
 
 from backend.data_pipeline import (
     IngestionPipeline,
@@ -203,9 +204,14 @@ class JobService:
             q = q.filter(or_(Job.salary_min >= salary_min, Job.salary_max >= salary_min))
 
         if skills:
-            # Filter by skills (PostgreSQL JSONB contains)
+            # The model stores skills as JSON, while PostgreSQL's containment
+            # operator is defined for JSONB. Cast only on PostgreSQL and keep
+            # the SQLite test/development database compatible.
             for skill in skills:
-                q = q.filter(Job.skills.op("@>")([skill]))
+                if self.db.bind.dialect.name == "postgresql":
+                    q = q.filter(cast(Job.skills, postgresql.JSONB).contains([skill]))
+                else:
+                    q = q.filter(cast(Job.skills, String).ilike(f'%"{skill}"%'))
 
         if company_id:
             q = q.filter(Job.company_id == company_id)

@@ -11,7 +11,7 @@ from backend.agents.career import (
     LearningStyle,
     AdvisorFocus,
 )
-from backend.models import User, Skill, LearningPlan, LearningPlan as LearningPlanModel
+from backend.models import User, Skill, Profile, LearningPlan, LearningPlan as LearningPlanModel
 from backend.models.learning_plan import LearningStatus
 from backend.database import get_db
 
@@ -183,7 +183,7 @@ class CareerService:
             )
 
         if not assessment.skill_gap_analysis:
-            return {"missing_skills": [], "priority_skills": [], "learning_resources": {}}
+            return {"missing_skills": [], "proficiency_gaps": [], "priority_skills": [], "learning_resources": {}}
 
         return {
             "missing_skills": [g.skill_name for g in assessment.skill_gap_analysis.gaps if g.is_missing],
@@ -319,7 +319,12 @@ class CareerService:
 
     def _get_user_skills(self, user_id: int) -> List[Dict[str, Any]]:
         """Get user's skills from database."""
-        skills = self.db.query(Skill).filter(Skill.profile_id == user_id).all()
+        # Skill.profile_id references Profile.id (not User.id).
+        # Resolve via Profile first (same pattern as Hermes CareerContextProvider).
+        profile = self.db.query(Profile).filter(Profile.user_id == user_id).first()
+        if not profile:
+            return []
+        skills = self.db.query(Skill).filter(Skill.profile_id == profile.id).all()
         return [
             {
                 "name": s.name,
